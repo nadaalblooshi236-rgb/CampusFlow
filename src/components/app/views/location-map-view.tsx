@@ -84,7 +84,7 @@ export default function LocationMapView() {
               <div key={loc.title} className={`bg-${loc.color}-50 p-4 rounded-xl border-l-4 border-${loc.color}-500`}>
                 <h3 className={`text-lg font-semibold text-${loc.color}-800 mb-2 flex items-center gap-2`}><loc.icon className="h-5 w-5"/>{loc.title}</h3>
                 <p className={`text-sm text-${loc.color}-700 mb-3`}>{loc.description}</p>
-                <ul className="space-y-1 text-xs list-disc list-inside text-${loc.color}-700">
+                <ul className={`space-y-1 text-xs list-disc list-inside text-${loc.color}-700`}>
                   {loc.details.map(detail => <li key={detail}>{detail}</li>)}
                 </ul>
               </div>
