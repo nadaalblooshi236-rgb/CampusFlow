@@ -1,3 +1,10 @@
+import { AppProvider } from '@/hooks/use-app-store';
+import MainLayout from '@/components/app/main-layout';
+
 export default function Home() {
-  return <></>;
+  return (
+    <AppProvider>
+      <MainLayout />
+    </AppProvider>
+  );
 }

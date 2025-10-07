@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "campus-map",
+      "description": "A placeholder map of the ATS campus.",
+      "imageUrl": "https://picsum.photos/seed/campusmap/600/400",
+      "imageHint": "map campus"
+    }
+  ]
 }
