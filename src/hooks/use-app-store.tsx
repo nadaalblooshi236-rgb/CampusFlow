@@ -44,7 +44,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   const [gateStatus, setGateStatus] = useState<'open' | 'closed'>("closed");
   const [currentCapacity, setCurrentCapacity] = useState(vehicles.filter(v => v.status === 'inside').length);
-  const [maxCapacity] = useState(5);
+  const [maxCapacity] = useState(50);
 
   const addNotification = (notif: Omit<Notification, 'id'>) => {
     const newNotif = { ...notif, id: Date.now() };

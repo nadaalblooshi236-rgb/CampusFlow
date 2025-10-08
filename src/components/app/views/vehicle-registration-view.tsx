@@ -3,7 +3,6 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Info } from "lucide-react";
@@ -32,7 +31,6 @@ export default function VehicleRegistrationView() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="car">Car</SelectItem>
-                  <SelectItem value="bus">School Bus</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -49,22 +47,12 @@ export default function VehicleRegistrationView() {
               <Input id="student" value="Emma Smith" readOnly className="bg-secondary" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="capacity">Vehicle Capacity</Label>
-              <Select>
-                <SelectTrigger id="capacity" className="focus:ring-2 focus:ring-ats-green">
-                  <SelectValue placeholder="Select capacity" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="4">4 seats</SelectItem>
-                  <SelectItem value="5">5 seats</SelectItem>
-                  <SelectItem value="6">6 seats</SelectItem>
-                  <SelectItem value="7">7 seats</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="studentClass">Class of Student</Label>
+              <Input id="studentClass" placeholder="e.g., Grade 5B" className="focus:ring-2 focus:ring-ats-green" />
             </div>
              <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
-              <Input id="phone" type="tel" placeholder="(555) 123-4567" className="focus:ring-2 focus:ring-ats-green" />
+              <Input id="phone" type="tel" placeholder="+971 5X XXX XXXX" className="focus:ring-2 focus:ring-ats-green" />
             </div>
           </div>
            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">

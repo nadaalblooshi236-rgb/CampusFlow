@@ -20,7 +20,8 @@ const parentTabs: Tab[] = [
 const teacherTabs: Tab[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
   { id: 'attendance', label: 'Student Attendance', icon: Clock },
-  { id: 'early-departures', label: 'Early Departures', icon: Car }
+  { id: 'early-departures', label: 'Early Departures', icon: Car },
+  { id: 'register', label: 'Register Vehicle', icon: UserPlus }
 ];
 
 const receptionTabs: Tab[] = [

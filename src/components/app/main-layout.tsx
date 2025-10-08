@@ -42,6 +42,8 @@ export default function MainLayout() {
             return <AttendanceView />;
           case 'early-departures':
             return <EarlyDeparturesView />;
+          case 'register':
+            return <VehicleRegistrationView />;
           default:
             return <TeacherDashboard />;
         }
