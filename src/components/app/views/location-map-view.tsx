@@ -4,6 +4,29 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { MapPin, Car, Bus } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const colorClasses = {
+  red: {
+    bg: 'bg-red-50',
+    border: 'border-red-500',
+    text800: 'text-red-800',
+    text700: 'text-red-700',
+  },
+  green: {
+    bg: 'bg-green-50',
+    border: 'border-green-500',
+    text800: 'text-green-800',
+    text700: 'text-green-700',
+  },
+  blue: {
+    bg: 'bg-blue-50',
+    border: 'border-blue-500',
+    text800: 'text-blue-800',
+    text700: 'text-blue-700',
+  },
+};
+
 
 export default function LocationMapView() {
   const mapImage = PlaceHolderImages.find(img => img.id === 'campus-map');
@@ -17,7 +40,7 @@ export default function LocationMapView() {
         "License plate recognition system in place",
         "Maximum 5 vehicles allowed on campus at once"
       ],
-      color: "red",
+      color: "red" as keyof typeof colorClasses,
       icon: MapPin
     },
     {
@@ -29,7 +52,7 @@ export default function LocationMapView() {
         "Maximum 10-minute wait time",
         "Use designated lanes only"
       ],
-      color: "green",
+      color: "green" as keyof typeof colorClasses,
       icon: Car
     },
     {
@@ -41,7 +64,7 @@ export default function LocationMapView() {
         "Supervised by staff members",
         "Buses follow scheduled routes"
       ],
-      color: "blue",
+      color: "blue" as keyof typeof colorClasses,
       icon: Bus
     }
   ];
@@ -80,15 +103,18 @@ export default function LocationMapView() {
           )}
           
           <div className="space-y-6">
-            {locations.map(loc => (
-              <div key={loc.title} className={`bg-${loc.color}-50 p-4 rounded-xl border-l-4 border-${loc.color}-500`}>
-                <h3 className={`text-lg font-semibold text-${loc.color}-800 mb-2 flex items-center gap-2`}><loc.icon className="h-5 w-5"/>{loc.title}</h3>
-                <p className={`text-sm text-${loc.color}-700 mb-3`}>{loc.description}</p>
-                <ul className={`space-y-1 text-xs list-disc list-inside text-${loc.color}-700`}>
-                  {loc.details.map(detail => <li key={detail}>{detail}</li>)}
-                </ul>
-              </div>
-            ))}
+            {locations.map(loc => {
+              const colors = colorClasses[loc.color];
+              return (
+                <div key={loc.title} className={cn("p-4 rounded-xl border-l-4", colors.bg, colors.border)}>
+                  <h3 className={cn("text-lg font-semibold mb-2 flex items-center gap-2", colors.text800)}><loc.icon className="h-5 w-5"/>{loc.title}</h3>
+                  <p className={cn("text-sm mb-3", colors.text700)}>{loc.description}</p>
+                  <ul className={cn("space-y-1 text-xs list-disc list-inside", colors.text700)}>
+                    {loc.details.map(detail => <li key={detail}>{detail}</li>)}
+                  </ul>
+                </div>
+              )
+            })}
           </div>
         </div>
       </CardContent>
