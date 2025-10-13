@@ -59,10 +59,10 @@ export const initialNotifications: Notification[] = [
 ];
   
 export const initialAttendance: Attendance[] = [
-    { student: "Emma Smith", date: "2023-12-01", entry: "8:15", exit: null, status: "present", vehicleId: 1 },
-    { student: "Michael Johnson", date: "2023-12-01", entry: "8:20", exit: "15:25", status: "present", vehicleId: 2 },
-    { student: "Sophia Chen", date: "2023-12-01", entry: null, exit: null, status: "absent", vehicleId: null },
-    { student: "Diego Garcia", date: "2023-12-01", entry: "8:10", exit: "14:45", status: "early departure", vehicleId: 4 },
-    { student: "Olivia Wilson", date: "2023-12-01", entry: "8:05", exit: "14:15", status: "early departure", vehicleId: 1 },
-    { student: "James Brown", date: "2023-12-01", entry: "8:30", exit: null, status: "present", vehicleId: 2 },
+    { student: "Nada Khaled Alblooshi", date: "2025-09-09", entry: "8:05", exit: null, status: "present", vehicleId: 1 },
+    { student: "Dana Mohammed Alsayari", date: "2025-09-09", entry: "8:12", exit: null, status: "present", vehicleId: 2 },
+    { student: "Maitha Saleh Alsayari", date: "2025-09-09", entry: null, exit: null, status: "absent", vehicleId: null },
+    { student: "Fatima Mohammed Al Jaberi", date: "2025-09-09", entry: "8:02", exit: "14:00", status: "early departure", vehicleId: 4 },
+    { student: "Alya Khalid Al Balushi", date: "2025-09-09", entry: "8:18", exit: null, status: "present", vehicleId: 1 },
+    { student: "Shaikha Abdullah Alshamsi", date: "2025-09-09", entry: "8:25", exit: null, status: "present", vehicleId: 2 },
 ];
