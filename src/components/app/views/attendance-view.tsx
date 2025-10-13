@@ -6,9 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { teacherSchedules } from "@/lib/schedule";
 
 export default function AttendanceView() {
   const { attendance } = useAppStore();
+  const scheduleData = teacherSchedules.find(s => s.teacher === "Laila Zuaiter");
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -19,8 +21,6 @@ export default function AttendanceView() {
     }
   };
   
-  const studentNames = [...new Set(attendance.map(a => a.student))];
-
   return (
     <Card>
       <CardHeader>
@@ -30,22 +30,22 @@ export default function AttendanceView() {
       <CardContent>
         <div className="mb-6 flex flex-col md:flex-row items-center gap-4">
           <div className="flex-1 w-full">
-            <label className="block text-sm font-medium text-foreground mb-1">Select Student</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Select Class</label>
             <Select>
               <SelectTrigger className="focus:ring-2 focus:ring-ats-green">
-                <SelectValue placeholder="All Students" />
+                <SelectValue placeholder="All Classes" />
               </SelectTrigger>
               <SelectContent>
-                 {studentNames.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
+                 {scheduleData?.classes.map(cls => <SelectItem key={cls.name} value={cls.name}>{cls.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div className="flex-1 w-full">
             <label className="block text-sm font-medium text-foreground mb-1">Date Range</label>
             <div className="flex items-center gap-2">
-              <Input type="date" defaultValue="2023-11-01" className="focus:ring-2 focus:ring-ats-green" />
+              <Input type="date" defaultValue="2025-09-09" className="focus:ring-2 focus:ring-ats-green" />
               <span>to</span>
-              <Input type="date" defaultValue="2023-12-01" className="focus:ring-2 focus:ring-ats-green" />
+              <Input type="date" defaultValue="2025-09-09" className="focus:ring-2 focus:ring-ats-green" />
             </div>
           </div>
         </div>
