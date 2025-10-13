@@ -4,15 +4,15 @@ export const teacherSchedules: TeacherSchedule[] = [
   {
     teacher: "Laila Zuaiter",
     schedule: [
-      { day: "Monday", time: "08:00 - 09:30", className: "12 CAI 51", room: "A-201" },
-      { day: "Monday", time: "10:00 - 11:30", className: "11 CAI 51", room: "A-203" },
-      { day: "Tuesday", time: "09:30 - 11:00", className: "10 CAI 51", room: "B-105" },
-      { day: "Tuesday", time: "12:00 - 13:30", className: "9 ADV 51", room: "C-301" },
-      { day: "Wednesday", time: "08:00 - 09:30", className: "9 ADV 56", room: "C-302" },
-      { day: "Wednesday", time: "11:00 - 12:30", className: "9 ADV 57", room: "C-303" },
-      { day: "Thursday", time: "09:00 - 10:30", className: "9 ADV 58", room: "D-110" },
-      { day: "Thursday", time: "13:00 - 14:30", className: "8 ADV 51", room: "D-112" },
-      { day: "Friday", time: "08:30 - 10:00", className: "8 ADV 55", room: "D-115" },
+      { day: "Monday", time: "08:00 - 09:30", className: "12 CAI 51", room: "af-1" },
+      { day: "Monday", time: "10:00 - 11:30", className: "11 CAI 51", room: "af-3" },
+      { day: "Tuesday", time: "09:30 - 11:00", className: "10 CAI 51", room: "bg-5" },
+      { day: "Tuesday", time: "12:00 - 13:30", className: "9 ADV 51", room: "ag-1" },
+      { day: "Wednesday", time: "08:00 - 09:30", className: "9 ADV 56", room: "ag-2" },
+      { day: "Wednesday", time: "11:00 - 12:30", className: "9 ADV 57", room: "ag-3" },
+      { day: "Thursday", time: "09:00 - 10:30", className: "9 ADV 58", room: "bf-10" },
+      { day: "Thursday", time: "13:00 - 14:30", className: "8 ADV 51", room: "bf-12" },
+      { day: "Friday", time: "08:30 - 10:00", className: "8 ADV 55", room: "bf-14" },
     ],
     classes: [
       { 
