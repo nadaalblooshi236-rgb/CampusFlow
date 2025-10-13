@@ -62,7 +62,4 @@ export const initialAttendance: Attendance[] = [
     { student: "Nada Khaled Alblooshi", date: "2025-09-09", entry: "8:05", exit: null, status: "present", vehicleId: 1 },
     { student: "Dana Mohammed Alsayari", date: "2025-09-09", entry: "8:12", exit: null, status: "present", vehicleId: 2 },
     { student: "Maitha Saleh Alsayari", date: "2025-09-09", entry: null, exit: null, status: "absent", vehicleId: null },
-    { student: "Fatima Mohammed Al Jaberi", date: "2025-09-09", entry: "8:02", exit: "14:00", status: "early departure", vehicleId: 4 },
-    { student: "Alya Khalid Al Balushi", date: "2025-09-09", entry: "8:18", exit: null, status: "present", vehicleId: 1 },
-    { student: "Shaikha Abdullah Alshamsi", date: "2025-09-09", entry: "8:25", exit: null, status: "present", vehicleId: 2 },
 ];
