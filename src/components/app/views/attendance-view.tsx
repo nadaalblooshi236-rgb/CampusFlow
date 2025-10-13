@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useAppStore } from "@/hooks/use-app-store";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,10 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { teacherSchedules } from "@/lib/schedule";
+import type { Attendance } from "@/lib/types";
 
 export default function AttendanceView() {
   const { attendance } = useAppStore();
   const scheduleData = teacherSchedules.find(s => s.teacher === "Laila Zuaiter");
+  const [selectedClass, setSelectedClass] = useState<string>("all");
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -20,7 +23,21 @@ export default function AttendanceView() {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  const filteredAttendance = (): Attendance[] => {
+    if (selectedClass === "all" || !scheduleData) {
+      return attendance;
+    }
+    const classInfo = scheduleData.classes.find(c => c.name === selectedClass);
+    if (!classInfo) {
+      return [];
+    }
+    const studentNames = classInfo.students.map(s => s.name);
+    return attendance.filter(record => studentNames.includes(record.student));
+  };
   
+  const attendanceToDisplay = filteredAttendance();
+
   return (
     <Card>
       <CardHeader>
@@ -31,11 +48,12 @@ export default function AttendanceView() {
         <div className="mb-6 flex flex-col md:flex-row items-center gap-4">
           <div className="flex-1 w-full">
             <label className="block text-sm font-medium text-foreground mb-1">Select Class</label>
-            <Select>
+            <Select onValueChange={setSelectedClass} value={selectedClass}>
               <SelectTrigger className="focus:ring-2 focus:ring-ats-green">
                 <SelectValue placeholder="All Classes" />
               </SelectTrigger>
               <SelectContent>
+                 <SelectItem value="all">All Classes</SelectItem>
                  {scheduleData?.classes.map(cls => <SelectItem key={cls.name} value={cls.name}>{cls.name}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -63,7 +81,7 @@ export default function AttendanceView() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {attendance.map((record, index) => (
+              {attendanceToDisplay.map((record, index) => (
                 <TableRow key={index}>
                   <TableCell className="font-medium">{record.student}</TableCell>
                   <TableCell>{record.date}</TableCell>
@@ -77,6 +95,13 @@ export default function AttendanceView() {
                   </TableCell>
                 </TableRow>
               ))}
+               {attendanceToDisplay.length === 0 && (
+                <TableRow>
+                    <TableCell colSpan={6} className="text-center h-24">
+                        No attendance records found for the selected class.
+                    </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
