@@ -51,3 +51,25 @@ export interface Attendance {
   status: "present" | "absent" | "early departure";
   vehicleId: number | null;
 }
+
+export interface Student {
+  name: string;
+}
+
+export interface Class {
+  name: string;
+  students: Student[];
+}
+
+export interface ScheduleEntry {
+  day: string;
+  time: string;
+  className: string;
+  room: string;
+}
+
+export interface TeacherSchedule {
+  teacher: string;
+  schedule: ScheduleEntry[];
+  classes: Class[];
+}

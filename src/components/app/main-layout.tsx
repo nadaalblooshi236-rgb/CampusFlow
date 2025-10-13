@@ -14,6 +14,7 @@ import EarlyDeparturesView from '@/components/app/views/early-departures-view';
 import VehicleAccessView from '@/components/app/views/vehicle-access-view';
 import AccessLogsView from '@/components/app/views/access-logs-view';
 import PickupRequestsManagementView from '@/components/app/views/pickup-requests-management-view';
+import ScheduleView from './views/schedule-view';
 
 
 export default function MainLayout() {
@@ -44,6 +45,8 @@ export default function MainLayout() {
             return <EarlyDeparturesView />;
           case 'register':
             return <VehicleRegistrationView />;
+          case 'schedule':
+            return <ScheduleView />;
           default:
             return <TeacherDashboard />;
         }
