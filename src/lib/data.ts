@@ -73,7 +73,7 @@ export const initialAttendance: Attendance[] = [
     { student: "Salama Mohammed Aljenibi", date: "2025-09-09", entry: "8:03", exit: null, status: "present", vehicleId: null },
     // 9 ADV 51
     { student: "Fatima Mohammed Al Jaberi", date: "2025-09-09", entry: "8:00", exit: null, status: "present", vehicleId: null },
-    { student: "Mouza Ali Al Shamsi", date: "2025-0B-09", entry: "7:55", exit: null, status: "present", vehicleId: null },
+    { student: "Mouza Ali Al Shamsi", date: "2025-09-09", entry: "7:55", exit: null, status: "present", vehicleId: null },
     { student: "Noura Hamdan Al Azmi", date: "2025-09-09", entry: "7:59", exit: null, status: "present", vehicleId: null },
     // 9 ADV 56
     { student: "Maha Rashid Albalooshi", date: "2025-09-09", entry: "8:02", exit: null, status: "present", vehicleId: null },
