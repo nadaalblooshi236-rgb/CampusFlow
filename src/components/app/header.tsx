@@ -46,7 +46,6 @@ export default function Header() {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="en">English</SelectItem>
-                        <SelectItem value="ar">العربية</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
