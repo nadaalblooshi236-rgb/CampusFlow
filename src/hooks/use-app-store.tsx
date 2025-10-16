@@ -35,7 +35,7 @@ const AppContext = createContext<AppState | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [currentUser, setCurrentUser] = useState<User>({ type: "reception", name: "Staff Member" });
+  const [currentUser, setCurrentUser] = useState<User>({ type: "reception", name: "Ayesha Al Marzooqi", studentName: "N/A" });
   
   const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles);
   const [requests, setRequests] = useState<PickupRequest[]>(initialRequests);
@@ -102,10 +102,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const changeRole = (role: UserRole) => {
+    const userDetails = {
+      parent: { name: "Fatima Al Hammadi", studentName: "Dana Mohammed Alsayari" },
+      teacher: { name: "Laila Zuaiter", studentName: "N/A" },
+      reception: { name: "Ayesha Al Marzooqi", studentName: "N/A" }
+    };
+    
     setCurrentUser({
       type: role,
-      name: role === "parent" ? "Parent User" : 
-            role === "teacher" ? "Teacher Name" : "Staff Member"
+      ...userDetails[role]
     });
     setActiveTab("dashboard");
   };

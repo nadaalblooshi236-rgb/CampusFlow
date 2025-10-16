@@ -36,7 +36,7 @@ export default function ParentDashboard() {
           <div className="flex justify-between items-start">
             <div>
               <CardTitle className="text-2xl font-bold">Welcome, {currentUser.name}</CardTitle>
-              <CardDescription>Parent of: Emma Smith</CardDescription>
+              <CardDescription>Parent of: {currentUser.studentName}</CardDescription>
             </div>
             <div className="text-right">
               <p className="text-sm text-muted-foreground">Current Status</p>

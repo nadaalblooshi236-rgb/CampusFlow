@@ -31,7 +31,7 @@ export default function PickupRequestView() {
     const newRequest = {
       plate: plate.toUpperCase(),
       driver: currentUser.name,
-      student: "Emma Smith", // Placeholder student
+      student: currentUser.studentName || "Student",
       time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       status: "pending" as const,
       type: "car" as const,

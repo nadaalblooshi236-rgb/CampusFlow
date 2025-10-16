@@ -3,6 +3,7 @@ export type UserRole = "parent" | "teacher" | "reception";
 export interface User {
   type: UserRole;
   name: string;
+  studentName?: string;
 }
 
 export interface Vehicle {

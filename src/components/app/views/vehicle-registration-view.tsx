@@ -6,8 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Info } from "lucide-react";
+import { useAppStore } from "@/hooks/use-app-store";
 
 export default function VehicleRegistrationView() {
+  const { currentUser } = useAppStore();
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // In a real app, this would submit data to the backend
@@ -40,11 +43,11 @@ export default function VehicleRegistrationView() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="driver">Driver Name</Label>
-              <Input id="driver" placeholder="John Smith" className="focus:ring-2 focus:ring-ats-green" />
+              <Input id="driver" defaultValue={currentUser.name} className="focus:ring-2 focus:ring-ats-green" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="student">Student Name</Label>
-              <Input id="student" value="Emma Smith" readOnly className="bg-secondary" />
+              <Input id="student" value={currentUser.studentName || ''} readOnly className="bg-secondary" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="studentClass">Class of Student</Label>
