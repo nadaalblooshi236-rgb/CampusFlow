@@ -2,9 +2,9 @@ import type { Vehicle, PickupRequest, Notification, Attendance } from './types';
 
 export const initialVehicles: Vehicle[] = [
     { id: 1, plate: "AUH123", driver: "Fatima Al Hammadi", student: "Dana Mohammed Alsayari", entryTime: "08:15", exitTime: null, status: "inside", capacity: 4, type: "car", lastUpdated: Date.now() },
-    { id: 2, plate: "DXB789", driver: "Lisa Johnson", student: "Michael Johnson", entryTime: "08:20", exitTime: "15:25", status: "exited", capacity: 5, type: "car", lastUpdated: Date.now() },
-    { id: 3, plate: "BUS001", driver: "Robert Chen", student: "Bus Route 1", entryTime: "08:05", exitTime: null, status: "inside", capacity: 50, type: "bus", lastUpdated: Date.now() },
-    { id: 4, plate: "NEW001", driver: "New Driver", student: "New Student", entryTime: null, exitTime: null, status: "registered", capacity: 4, type: "car", lastUpdated: Date.now() },
+    { id: 2, plate: "DXB789", driver: "Hessa Al Mulla", student: "Saif Al Mulla", entryTime: "08:20", exitTime: "15:25", status: "exited", capacity: 5, type: "car", lastUpdated: Date.now() },
+    { id: 3, plate: "BUS001", driver: "Rashid Al Mansoori", student: "Bus Route 1", entryTime: "08:05", exitTime: null, status: "inside", capacity: 50, type: "bus", lastUpdated: Date.now() },
+    { id: 4, plate: "NEW001", driver: "Ahmed Al Kuwaiti", student: "Noor Al Kuwaiti", entryTime: null, exitTime: null, status: "registered", capacity: 4, type: "car", lastUpdated: Date.now() },
 
 ];
 
@@ -12,8 +12,8 @@ export const initialRequests: PickupRequest[] = [
     { 
       id: 1, 
       plate: "SHJ345", 
-      driver: "David Wilson", 
-      student: "Olivia Wilson", 
+      driver: "Mariam Al Falahi", 
+      student: "Zayed Al Falahi", 
       time: "14:10", 
       status: "approved", 
       type: "car",
@@ -26,8 +26,8 @@ export const initialRequests: PickupRequest[] = [
     { 
       id: 2, 
       plate: "MNO678", 
-      driver: "Sarah Brown", 
-      student: "James Brown", 
+      driver: "Noora Al Shehhi", 
+      student: "Sultan Al Shehhi", 
       time: "14:05", 
       status: "denied", 
       type: "car",
@@ -35,7 +35,7 @@ export const initialRequests: PickupRequest[] = [
       submittedAt: "13:30",
       deniedAt: "13:35",
       deniedBy: "Ayesha Al Marzooqi",
-      denialReason: "No valid reason provided",
+      denialReason: "Not specified",
       lastUpdated: Date.now()
     },
      { 
