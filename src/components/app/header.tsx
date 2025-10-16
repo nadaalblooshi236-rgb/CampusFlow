@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { useAppStore } from "@/hooks/use-app-store";
 import type { UserRole } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -37,18 +37,6 @@ export default function Header() {
                 <SelectItem value="reception">Reception</SelectItem>
               </SelectContent>
             </Select>
-
-             <div className="flex items-center gap-2">
-                <Globe className="text-white" />
-                <Select defaultValue="en">
-                    <SelectTrigger className="w-[120px] bg-ats-blue text-white border-ats-green focus:ring-ats-green">
-                        <SelectValue placeholder="Language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="en">English</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
           </div>
         </div>
       </div>
