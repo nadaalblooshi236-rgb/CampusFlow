@@ -5,7 +5,6 @@ export const initialVehicles: Vehicle[] = [
     { id: 2, plate: "DXB 9876", driver: "Hessa Al Mulla", student: "Saif Al Mulla", entryTime: "08:20", exitTime: "15:25", status: "exited", capacity: 5, type: "car", lastUpdated: Date.now() },
     { id: 3, plate: "SHJ 1001", driver: "Rashid Al Mansoori", student: "Bus Route 1", entryTime: "08:05", exitTime: null, status: "inside", capacity: 50, type: "bus", lastUpdated: Date.now() },
     { id: 4, plate: "RAK 5555", driver: "Ahmed Al Kuwaiti", student: "Noor Al Kuwaiti", entryTime: null, exitTime: null, status: "registered", capacity: 4, type: "car", lastUpdated: Date.now() },
-
 ];
 
 export const initialRequests: PickupRequest[] = [
