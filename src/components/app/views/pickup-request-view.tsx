@@ -68,7 +68,7 @@ export default function PickupRequestView() {
               type="text" 
               value={plate}
               onChange={(e) => setPlate(e.target.value)}
-              placeholder="ABC123"
+              placeholder="AUH 12345"
               required
               className="focus:ring-2 focus:ring-ats-green"
             />

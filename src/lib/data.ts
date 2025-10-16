@@ -1,17 +1,17 @@
 import type { Vehicle, PickupRequest, Notification, Attendance } from './types';
 
 export const initialVehicles: Vehicle[] = [
-    { id: 1, plate: "AUH123", driver: "Fatima Al Hammadi", student: "Dana Mohammed Alsayari", entryTime: "08:15", exitTime: null, status: "inside", capacity: 4, type: "car", lastUpdated: Date.now() },
-    { id: 2, plate: "DXB789", driver: "Hessa Al Mulla", student: "Saif Al Mulla", entryTime: "08:20", exitTime: "15:25", status: "exited", capacity: 5, type: "car", lastUpdated: Date.now() },
-    { id: 3, plate: "BUS001", driver: "Rashid Al Mansoori", student: "Bus Route 1", entryTime: "08:05", exitTime: null, status: "inside", capacity: 50, type: "bus", lastUpdated: Date.now() },
-    { id: 4, plate: "NEW001", driver: "Ahmed Al Kuwaiti", student: "Noor Al Kuwaiti", entryTime: null, exitTime: null, status: "registered", capacity: 4, type: "car", lastUpdated: Date.now() },
+    { id: 1, plate: "AUH 12345", driver: "Fatima Al Hammadi", student: "Dana Mohammed Alsayari", entryTime: "08:15", exitTime: null, status: "inside", capacity: 4, type: "car", lastUpdated: Date.now() },
+    { id: 2, plate: "DXB 9876", driver: "Hessa Al Mulla", student: "Saif Al Mulla", entryTime: "08:20", exitTime: "15:25", status: "exited", capacity: 5, type: "car", lastUpdated: Date.now() },
+    { id: 3, plate: "SHJ 1001", driver: "Rashid Al Mansoori", student: "Bus Route 1", entryTime: "08:05", exitTime: null, status: "inside", capacity: 50, type: "bus", lastUpdated: Date.now() },
+    { id: 4, plate: "RAK 5555", driver: "Ahmed Al Kuwaiti", student: "Noor Al Kuwaiti", entryTime: null, exitTime: null, status: "registered", capacity: 4, type: "car", lastUpdated: Date.now() },
 
 ];
 
 export const initialRequests: PickupRequest[] = [
     { 
       id: 1, 
-      plate: "SHJ345", 
+      plate: "SHJ 3456", 
       driver: "Mariam Al Falahi", 
       student: "Zayed Al Falahi", 
       time: "14:10", 
@@ -25,7 +25,7 @@ export const initialRequests: PickupRequest[] = [
     },
     { 
       id: 2, 
-      plate: "MNO678", 
+      plate: "AJM 6789", 
       driver: "Noora Al Shehhi", 
       student: "Sultan Al Shehhi", 
       time: "14:05", 
@@ -40,7 +40,7 @@ export const initialRequests: PickupRequest[] = [
     },
      { 
       id: 3, 
-      plate: "PQR912", 
+      plate: "FUJ 9123", 
       driver: "Fatima Al Hammadi", 
       student: "Dana Mohammed Alsayari", 
       time: "13:55", 
@@ -53,18 +53,18 @@ export const initialRequests: PickupRequest[] = [
 ];
 
 export const initialNotifications: Notification[] = [
-    { id: 1, message: "Vehicle AUH123 has entered campus", time: "08:15", type: "entry" },
-    { id: 2, message: "Pickup request approved for SHJ345", time: "13:50", type: "approval" },
-    { id: 3, message: "Vehicle DXB789 has exited campus", time: "15:25", type: "exit" }
+    { id: 1, message: "Vehicle AUH 12345 has entered campus", time: "08:15", type: "entry" },
+    { id: 2, message: "Pickup request approved for SHJ 3456", time: "13:50", type: "approval" },
+    { id: 3, message: "Vehicle DXB 9876 has exited campus", time: "15:25", type: "exit" }
 ];
   
 export const initialAttendance: Attendance[] = [
     // 12 CAI 51
-    { student: "Nada Khaled Alblooshi", date: "2025-09-09", entry: "8:05", exit: null, status: "present", vehicleId: 1 },
+    { student: "Nada Khaled Alblooshi", date: "2025-09-09", entry: "8:05", exit: null, status: "present", vehicleId: null },
     { student: "Maitha Hazza Alhebsi", date: "2025-09-09", entry: "8:07", exit: null, status: "present", vehicleId: null },
     { student: "Meera Saleh Aljabri", date: "2025-09-09", entry: null, exit: null, status: "absent", vehicleId: null },
     // 11 CAI 51
-    { student: "Dana Mohammed Alsayari", date: "2025-09-09", entry: "8:12", exit: "14:15", status: "early departure", vehicleId: 2 },
+    { student: "Dana Mohammed Alsayari", date: "2025-09-09", entry: "8:12", exit: "14:15", status: "early departure", vehicleId: 1 },
     { student: "Reem Mohammed Alsayari", date: "2025-09-09", entry: "8:10", exit: null, status: "present", vehicleId: null },
     { student: "Taif Said Alshamsi", date: "2025-09-09", entry: "8:11", exit: null, status: "present", vehicleId: null },
     // 10 CAI 51
