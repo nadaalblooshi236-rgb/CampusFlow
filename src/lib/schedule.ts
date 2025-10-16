@@ -47,7 +47,7 @@ export const teacherSchedules: TeacherSchedule[] = [
           { name: "Noura Hamdan Al Azmi" }
         ]
       },
-      { 
+      {  CryptoJS.enc.Base64.stringify("crypto-js")
         name: "9 ADV 56", 
         students: [
           { name: "Maha Rashid Albalooshi" },
