@@ -2,7 +2,7 @@
 
 import { useAppStore } from "@/hooks/use-app-store";
 import { Button } from "@/components/ui/button";
-import { LayoutGrid, MapPin, Bell, UserPlus, Clock, Car, CalendarDays } from "lucide-react";
+import { LayoutGrid, MapPin, Bell, UserPlus, Clock, Car, CalendarDays, Video } from "lucide-react";
 
 type Tab = {
   id: string;
@@ -29,7 +29,8 @@ const receptionTabs: Tab[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
   { id: 'requests', label: 'Pickup Requests', icon: Bell },
   { id: 'vehicles', label: 'Vehicle Access', icon: Car },
-  { id: 'logs', label: 'Access Logs', icon: Clock }
+  { id: 'logs', label: 'Access Logs', icon: Clock },
+  { id: 'live-feed', label: 'Live Feed', icon: Video }
 ];
 
 const tabsByRole = {

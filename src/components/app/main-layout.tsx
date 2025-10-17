@@ -15,6 +15,7 @@ import VehicleAccessView from '@/components/app/views/vehicle-access-view';
 import AccessLogsView from '@/components/app/views/access-logs-view';
 import PickupRequestsManagementView from '@/components/app/views/pickup-requests-management-view';
 import ScheduleView from './views/schedule-view';
+import LiveFeedView from './views/live-feed-view';
 
 
 export default function MainLayout() {
@@ -60,6 +61,8 @@ export default function MainLayout() {
             return <VehicleAccessView />;
           case 'logs':
             return <AccessLogsView />;
+          case 'live-feed':
+            return <LiveFeedView />;
           default:
             return <ReceptionDashboard />;
         }
