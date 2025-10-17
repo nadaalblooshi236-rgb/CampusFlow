@@ -2,7 +2,7 @@
 
 import { useAppStore } from "@/hooks/use-app-store";
 import { Button } from "@/components/ui/button";
-import { LayoutGrid, MapPin, Bell, UserPlus, Clock, Car, CalendarDays, Video } from "lucide-react";
+import { LayoutGrid, MapPin, Bell, UserPlus, CalendarDays, Clock, Video, Car } from "lucide-react";
 
 type Tab = {
   id: string;
@@ -20,8 +20,7 @@ const parentTabs: Tab[] = [
 const teacherTabs: Tab[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
   { id: 'schedule', label: 'My Schedule', icon: CalendarDays },
-  { id: 'attendance', label: 'Student Attendance', icon: Clock },
-  { id: 'early-departures', label: 'Early Departures', icon: Car },
+  { id: 'attendance', label: 'Live Attendance', icon: Clock },
   { id: 'register', label: 'Register Vehicle', icon: UserPlus }
 ];
 

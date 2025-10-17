@@ -10,7 +10,6 @@ import LocationMapView from '@/components/app/views/location-map-view';
 import PickupRequestView from '@/components/app/views/pickup-request-view';
 import VehicleRegistrationView from '@/components/app/views/vehicle-registration-view';
 import AttendanceView from '@/components/app/views/attendance-view';
-import EarlyDeparturesView from '@/components/app/views/early-departures-view';
 import VehicleAccessView from '@/components/app/views/vehicle-access-view';
 import AccessLogsView from '@/components/app/views/access-logs-view';
 import PickupRequestsManagementView from '@/components/app/views/pickup-requests-management-view';
@@ -42,12 +41,10 @@ export default function MainLayout() {
             return <TeacherDashboard />;
           case 'attendance':
             return <AttendanceView />;
-          case 'early-departures':
-            return <EarlyDeparturesView />;
-          case 'register':
-            return <VehicleRegistrationView />;
           case 'schedule':
             return <ScheduleView />;
+          case 'register':
+            return <VehicleRegistrationView />;
           default:
             return <TeacherDashboard />;
         }
