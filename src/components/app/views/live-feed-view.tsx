@@ -8,6 +8,8 @@ import { Video, CameraOff, ScanLine, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { identifyLicensePlate } from '@/ai/flows/identify-license-plate';
 import { useAppStore } from '@/hooks/use-app-store';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 export default function LiveFeedView() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -15,6 +17,7 @@ export default function LiveFeedView() {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [identifiedPlate, setIdentifiedPlate] = useState<string | null>(null);
+  const [isAutoScanOn, setIsAutoScanOn] = useState(false);
   const { toast } = useToast();
   const { vehicles, handleEnterGate, requests } = useAppStore();
 
@@ -44,10 +47,10 @@ export default function LiveFeedView() {
   }, [hasCameraPermission, toast]);
 
   const handleScanPlate = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current || !videoRef.current.srcObject) return;
 
     setLoading(true);
-    setIdentifiedPlate(null);
+    // Don't reset identified plate here to keep showing the last scanned one
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -62,16 +65,17 @@ export default function LiveFeedView() {
         const result = await identifyLicensePlate({ photoDataUri: dataUri });
         setIdentifiedPlate(result.licensePlate);
 
-        // Check if the plate is valid and approved
         const vehicle = vehicles.find(v => v.plate === result.licensePlate);
         const request = requests.find(r => r.plate === result.licensePlate && r.status === 'approved');
 
         if (vehicle && request) {
-            toast({
-                title: 'Vehicle Approved',
-                description: `License Plate ${result.licensePlate} recognized. Opening gate.`,
-            });
-            handleEnterGate(vehicle.id);
+            if(vehicle.status !== 'inside') {
+                toast({
+                    title: 'Vehicle Approved',
+                    description: `License Plate ${result.licensePlate} recognized. Opening gate.`,
+                });
+                handleEnterGate(vehicle.id);
+            }
         } else if (vehicle) {
             toast({
                 variant: 'destructive',
@@ -87,15 +91,34 @@ export default function LiveFeedView() {
         }
       } catch (error) {
         console.error('Error identifying license plate:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Scan Failed',
-          description: 'Could not identify a license plate. Please try again.',
-        });
+        // Do not toast on every failed scan in auto mode to avoid spamming
+        if (!isAutoScanOn) {
+            toast({
+            variant: 'destructive',
+            title: 'Scan Failed',
+            description: 'Could not identify a license plate. Please try again.',
+            });
+        }
       }
     }
     setLoading(false);
   };
+  
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null;
+    if (isAutoScanOn && hasCameraPermission && !loading) {
+      intervalId = setInterval(() => {
+        handleScanPlate();
+      }, 5000); // Scan every 5 seconds
+    }
+    
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isAutoScanOn, hasCameraPermission, loading]);
+
 
   return (
     <Card>
@@ -104,7 +127,7 @@ export default function LiveFeedView() {
           <Video />
           Gate Camera Live Feed
         </CardTitle>
-        <CardDescription>Real-time video stream from the main entrance gate. Use the scan button to identify license plates.</CardDescription>
+        <CardDescription>Real-time video stream from the main entrance gate. Enable automatic scanning to identify license plates.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="aspect-video w-full bg-secondary rounded-lg overflow-hidden relative border">
@@ -135,18 +158,26 @@ export default function LiveFeedView() {
              {identifiedPlate && (
                 <Alert className="max-w-md">
                     <ScanLine className="h-4 w-4" />
-                    <AlertTitle>Plate Identified!</AlertTitle>
+                    <AlertTitle>Last Scanned Plate</AlertTitle>
                     <AlertDescription>
-                        <p>Scanned License Plate: <span className="font-bold text-lg text-primary">{identifiedPlate}</span></p>
+                        <p className="font-bold text-lg text-primary">{identifiedPlate}</p>
                     </AlertDescription>
                 </Alert>
             )}
-            <div className="flex gap-2 ml-auto">
+            <div className="flex items-center gap-4 ml-auto">
                 <Button variant="outline" onClick={() => window.location.reload()}>Refresh Feed</Button>
-                <Button onClick={handleScanPlate} disabled={loading || !hasCameraPermission} className="bg-ats-green hover:bg-green-700">
-                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanLine className="mr-2 h-4 w-4" />}
-                    {loading ? 'Scanning...' : 'Scan License Plate'}
-                </Button>
+                 <div className="flex items-center space-x-2">
+                    <Switch 
+                        id="autoscan-mode" 
+                        checked={isAutoScanOn} 
+                        onCheckedChange={setIsAutoScanOn}
+                        disabled={!hasCameraPermission}
+                    />
+                    <Label htmlFor="autoscan-mode" className="flex flex-col">
+                        <span>Automatic Scanning</span>
+                        {loading && isAutoScanOn && <span className="text-xs text-primary animate-pulse">Scanning...</span>}
+                    </Label>
+                </div>
             </div>
         </div>
       </CardContent>
