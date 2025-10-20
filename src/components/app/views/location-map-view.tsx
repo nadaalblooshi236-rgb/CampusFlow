@@ -2,7 +2,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Image from "next/image";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { MapPin, Car, Bus, ParkingSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +38,6 @@ const colorClasses = {
 
 
 export default function LocationMapView() {
-  const mapImage = PlaceHolderImages.find(img => img.id === 'campus-map');
 
   const locations = [
     {
@@ -96,12 +94,10 @@ export default function LocationMapView() {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {mapImage && (
             <div className="relative">
               <Image
-                src={mapImage.imageUrl}
-                alt={mapImage.description}
-                data-ai-hint={mapImage.imageHint}
+                src="/campus-map.jpg"
+                alt="Campus Access Map"
                 width={600}
                 height={400}
                 className="w-full h-auto rounded-lg shadow-lg object-cover"
@@ -116,7 +112,6 @@ export default function LocationMapView() {
                 );
               })}
             </div>
-          )}
           
           <div className="space-y-6">
             {locations.map(loc => {
