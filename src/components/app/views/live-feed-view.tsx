@@ -14,89 +14,105 @@ import { Input } from '@/components/ui/input';
 
 export default function LiveFeedView() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isStreamActive, setIsStreamActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [identifiedPlate, setIdentifiedPlate] = useState<string | null>(null);
   const [isAutoScanOn, setIsAutoScanOn] = useState(false);
   const [streamUrl, setStreamUrl] = useState('');
+  const [connectedUrl, setConnectedUrl] = useState('');
   const { toast } = useToast();
   const { vehicles, handleEnterGate, handleExitGate } = useAppStore();
   
   const connectStream = () => {
-    if (videoRef.current && streamUrl) {
-      // A common issue: some streams won't play in a <video> tag directly.
-      // A common workaround is to use an <img> tag for MJPEG streams.
-      // However, we need <video> for canvas capture, so we'll stick with this.
-      // If issues persist, ensuring the stream is CORS-friendly is key.
+    if (!streamUrl) {
+      toast({
+        variant: 'destructive',
+        title: 'No URL',
+        description: 'Please enter a stream URL.',
+      });
+      return;
+    }
+
+    setIsStreamActive(false);
+    setConnectedUrl(streamUrl);
+    
+    // For the visual feed, we use an <img> tag which is more reliable for MJPEG
+    if (imageRef.current) {
+        imageRef.current.src = streamUrl;
+    }
+
+    // For capturing, we still need a video element, but it can be hidden
+    if (videoRef.current) {
       videoRef.current.src = streamUrl;
       videoRef.current.play().catch(e => {
-        console.error("Error playing stream:", e);
-        toast({
-          variant: 'destructive',
-          title: 'Stream Error',
-          description: 'Could not connect. Check URL, network, and CORS policy on the stream.',
-        });
-        setIsStreamActive(false);
+        console.error("Error playing video for capture:", e);
+        // We don't toast here because the user sees the img feed
       });
     }
   };
   
   useEffect(() => {
-    const video = videoRef.current;
-    if (video) {
-        const handlePlaying = () => setIsStreamActive(true);
-        const handleError = () => {
-            setIsStreamActive(false);
-             toast({
-                variant: 'destructive',
-                title: 'Stream Failed',
-                description: 'The video stream could not be loaded. Ensure the URL is correct and the stream is active.',
-            });
-        };
+    const image = imageRef.current;
+    if (!image) return;
 
-        video.addEventListener('playing', handlePlaying);
-        video.addEventListener('error', handleError);
+    const handleLoad = () => setIsStreamActive(true);
+    const handleError = () => {
+      setIsStreamActive(false);
+      if (connectedUrl) { // Only show error if a connection was attempted
+        toast({
+          variant: 'destructive',
+          title: 'Stream Error',
+          description: 'Could not connect. Check URL, network, and CORS policy on the stream.',
+        });
+      }
+    };
 
-        return () => {
-            video.removeEventListener('playing', handlePlaying);
-            video.removeEventListener('error', handleError);
-        };
-    }
-  }, [streamUrl, toast]);
+    image.addEventListener('load', handleLoad);
+    image.addEventListener('error', handleError);
+
+    return () => {
+      image.removeEventListener('load', handleLoad);
+      image.removeEventListener('error', handleError);
+    };
+  }, [connectedUrl, toast]);
 
 
   const handleScanPlate = async () => {
-    if (!videoRef.current || !canvasRef.current || !isStreamActive) return;
+    // We now capture from the <img> tag, not the <video> tag
+    if (!imageRef.current || !canvasRef.current || !isStreamActive) return;
 
     setLoading(true);
 
-    const video = videoRef.current;
+    const img = imageRef.current;
     const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
     const context = canvas.getContext('2d');
+    
     if (context) {
-      context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+      context.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
       const dataUri = canvas.toDataURL('image/jpeg');
       
       try {
         const result = await identifyLicensePlate({ photoDataUri: dataUri });
-        setIdentifiedPlate(result.licensePlate);
+        const scannedPlate = result.licensePlate;
+        setIdentifiedPlate(scannedPlate);
 
-        const vehicle = vehicles.find(v => v.plate === result.licensePlate);
+        const vehicle = vehicles.find(v => v.plate === scannedPlate);
         
         if (vehicle) {
           if (vehicle.status === 'inside') {
              toast({
                 title: 'Vehicle Exiting',
-                description: `License Plate ${result.licensePlate} recognized. Recording exit.`,
+                description: `License Plate ${scannedPlate} recognized. Recording exit.`,
             });
             handleExitGate(vehicle.id);
           } else {
              toast({
                 title: 'Vehicle Entering',
-                description: `License Plate ${result.licensePlate} recognized. Opening gate.`,
+                description: `License Plate ${scannedPlate} recognized. Opening gate.`,
             });
             handleEnterGate(vehicle.id);
           }
@@ -104,7 +120,7 @@ export default function LiveFeedView() {
              toast({
                 variant: 'destructive',
                 title: 'Vehicle Not Registered',
-                description: `Plate ${result.licensePlate} is not registered in the system.`,
+                description: `Plate ${scannedPlate} is not registered in the system.`,
             });
         }
       } catch (error) {
@@ -134,7 +150,8 @@ export default function LiveFeedView() {
         clearInterval(intervalId);
       }
     };
-  }, [isAutoScanOn, isStreamActive, loading, handleScanPlate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAutoScanOn, isStreamActive, loading]);
 
 
   return (
@@ -158,8 +175,13 @@ export default function LiveFeedView() {
         </div>
 
         <div className="aspect-video w-full bg-secondary rounded-lg overflow-hidden relative border">
-          <video ref={videoRef} className="w-full h-full object-cover" muted playsInline crossOrigin="anonymous"/>
+          {/* Display stream in an img tag, which is more robust for MJPEG */}
+          <img ref={imageRef} className="w-full h-full object-contain" crossOrigin="anonymous" alt="Live Stream" />
+          
+          {/* Hidden video and canvas for capturing frames */}
+          <video ref={videoRef} className="hidden" muted playsInline crossOrigin="anonymous"/>
           <canvas ref={canvasRef} style={{ display: 'none' }} />
+
           {!isStreamActive && (
              <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
                 <CameraOff className="w-16 h-16 text-muted-foreground" />
@@ -169,16 +191,17 @@ export default function LiveFeedView() {
           )}
         </div>
 
-         <div className="flex justify-between items-center">
-             {identifiedPlate && (
-                <Alert className="max-w-md">
+         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+             {identifiedPlate ? (
+                <Alert className="w-full sm:max-w-md">
                     <ScanLine className="h-4 w-4" />
                     <AlertTitle>Last Scanned Plate</AlertTitle>
                     <AlertDescription>
                         <p className="font-bold text-lg text-primary">{identifiedPlate}</p>
                     </AlertDescription>
                 </Alert>
-            )}
+            ) : <div className="hidden sm:block"></div>}
+            
             <div className="flex items-center gap-4 ml-auto">
                  <div className="flex items-center space-x-2">
                     <Switch 
@@ -192,6 +215,10 @@ export default function LiveFeedView() {
                         {loading && isAutoScanOn && <span className="text-xs text-primary animate-pulse">Scanning...</span>}
                     </Label>
                 </div>
+                <Button onClick={handleScanPlate} disabled={!isStreamActive || loading}>
+                    {loading && !isAutoScanOn ? <Loader2 className="animate-spin"/> : <ScanLine />}
+                    Manual Scan
+                </Button>
             </div>
         </div>
       </CardContent>
