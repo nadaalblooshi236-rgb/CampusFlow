@@ -13,7 +13,6 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 
 export default function LiveFeedView() {
-  const videoRef = useRef<HTMLVideoElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isStreamActive, setIsStreamActive] = useState(false);
@@ -38,18 +37,8 @@ export default function LiveFeedView() {
     setIsStreamActive(false);
     setConnectedUrl(streamUrl);
     
-    // For the visual feed, we use an <img> tag which is more reliable for MJPEG
     if (imageRef.current) {
         imageRef.current.src = streamUrl;
-    }
-
-    // For capturing, we still need a video element, but it can be hidden
-    if (videoRef.current) {
-      videoRef.current.src = streamUrl;
-      videoRef.current.play().catch(e => {
-        console.error("Error playing video for capture:", e);
-        // We don't toast here because the user sees the img feed
-      });
     }
   };
   
@@ -60,11 +49,11 @@ export default function LiveFeedView() {
     const handleLoad = () => setIsStreamActive(true);
     const handleError = () => {
       setIsStreamActive(false);
-      if (connectedUrl) { // Only show error if a connection was attempted
+      if (connectedUrl) { 
         toast({
           variant: 'destructive',
           title: 'Stream Error',
-          description: 'Could not connect. Check URL, network, and CORS policy on the stream.',
+          description: 'Could not connect. Check URL, network, and ensure the streamer is running with CORS enabled.',
         });
       }
     };
@@ -80,10 +69,10 @@ export default function LiveFeedView() {
 
 
   const handleScanPlate = async () => {
-    // We now capture from the <img> tag, not the <video> tag
     if (!imageRef.current || !canvasRef.current || !isStreamActive) return;
 
     setLoading(true);
+    setIdentifiedPlate(null);
 
     const img = imageRef.current;
     const canvas = canvasRef.current;
@@ -92,6 +81,7 @@ export default function LiveFeedView() {
     const context = canvas.getContext('2d');
     
     if (context) {
+      // Draw the image from the <img> tag to the canvas
       context.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
       const dataUri = canvas.toDataURL('image/jpeg');
       
@@ -125,7 +115,7 @@ export default function LiveFeedView() {
         }
       } catch (error) {
         console.error('Error identifying license plate:', error);
-         if (!isAutoScanOn) { // Only show error toast on manual scan
+         if (!isAutoScanOn) {
           toast({
             variant: 'destructive',
             title: 'Scan Failed',
@@ -175,11 +165,8 @@ export default function LiveFeedView() {
         </div>
 
         <div className="aspect-video w-full bg-secondary rounded-lg overflow-hidden relative border">
-          {/* Display stream in an img tag, which is more robust for MJPEG */}
           <img ref={imageRef} className="w-full h-full object-contain" crossOrigin="anonymous" alt="Live Stream" />
           
-          {/* Hidden video and canvas for capturing frames */}
-          <video ref={videoRef} className="hidden" muted playsInline crossOrigin="anonymous"/>
           <canvas ref={canvasRef} style={{ display: 'none' }} />
 
           {!isStreamActive && (
