@@ -4,50 +4,66 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Video, CameraOff, ScanLine, Loader2 } from 'lucide-react';
+import { Video, CameraOff, ScanLine, Loader2, Link } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { identifyLicensePlate } from '@/ai/flows/identify-license-plate';
 import { useAppStore } from '@/hooks/use-app-store';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 export default function LiveFeedView() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [isStreamActive, setIsStreamActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [identifiedPlate, setIdentifiedPlate] = useState<string | null>(null);
   const [isAutoScanOn, setIsAutoScanOn] = useState(false);
+  const [streamUrl, setStreamUrl] = useState('');
   const { toast } = useToast();
   const { vehicles, handleEnterGate, handleExitGate } = useAppStore();
-
-  useEffect(() => {
-    const getCameraPermission = async () => {
-      if (typeof window === 'undefined' || hasCameraPermission !== null) return;
-
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        setHasCameraPermission(true);
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      } catch (error) {
-        console.error('Error accessing camera:', error);
-        setHasCameraPermission(false);
+  
+  const connectStream = () => {
+    if (videoRef.current && streamUrl) {
+      videoRef.current.src = streamUrl;
+      videoRef.current.play().catch(e => {
+        console.error("Error playing stream:", e);
         toast({
           variant: 'destructive',
-          title: 'Camera Access Denied',
-          description: 'Please enable camera permissions in your browser settings to view the live feed.',
+          title: 'Stream Error',
+          description: 'Could not connect to the video stream. Check the URL and network.',
         });
-      }
-    };
+        setIsStreamActive(false);
+      });
+    }
+  };
+  
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) {
+        const handlePlaying = () => setIsStreamActive(true);
+        const handleError = () => {
+            setIsStreamActive(false);
+             toast({
+                variant: 'destructive',
+                title: 'Stream Failed',
+                description: 'The video stream could not be loaded. Ensure the URL is correct and the stream is active.',
+            });
+        };
 
-    getCameraPermission();
-  }, [hasCameraPermission, toast]);
+        video.addEventListener('playing', handlePlaying);
+        video.addEventListener('error', handleError);
+
+        return () => {
+            video.removeEventListener('playing', handlePlaying);
+            video.removeEventListener('error', handleError);
+        };
+    }
+  }, [streamUrl, toast]);
+
 
   const handleScanPlate = async () => {
-    if (!videoRef.current || !canvasRef.current || !videoRef.current.srcObject) return;
+    if (!videoRef.current || !canvasRef.current || !isStreamActive) return;
 
     setLoading(true);
     // Don't reset identified plate here to keep showing the last scanned one
@@ -69,14 +85,12 @@ export default function LiveFeedView() {
         
         if (vehicle) {
           if (vehicle.status === 'inside') {
-            // If car is inside, log an exit
             toast({
                 title: 'Vehicle Exiting',
                 description: `License Plate ${result.licensePlate} recognized. Recording exit.`,
             });
             handleExitGate(vehicle.id);
           } else {
-            // If car is not inside, log an entry
             toast({
                 title: 'Vehicle Entering',
                 description: `License Plate ${result.licensePlate} recognized. Opening gate.`,
@@ -92,7 +106,6 @@ export default function LiveFeedView() {
         }
       } catch (error) {
         console.error('Error identifying license plate:', error);
-        // Do not toast on every failed scan in auto mode to avoid spamming
         if (!isAutoScanOn) {
             toast({
             variant: 'destructive',
@@ -107,7 +120,7 @@ export default function LiveFeedView() {
   
   useEffect(() => {
     let intervalId: NodeJS.Timeout | null = null;
-    if (isAutoScanOn && hasCameraPermission && !loading) {
+    if (isAutoScanOn && isStreamActive && !loading) {
       intervalId = setInterval(() => {
         handleScanPlate();
       }, 5000); // Scan every 5 seconds
@@ -118,7 +131,7 @@ export default function LiveFeedView() {
         clearInterval(intervalId);
       }
     };
-  }, [isAutoScanOn, hasCameraPermission, loading]);
+  }, [isAutoScanOn, isStreamActive, loading]);
 
 
   return (
@@ -128,33 +141,31 @@ export default function LiveFeedView() {
           <Video />
           Gate Camera Live Feed
         </CardTitle>
-        <CardDescription>Real-time video stream from the main entrance gate. Enable automatic scanning to identify license plates.</CardDescription>
+        <CardDescription>Enter the network URL of your Raspberry Pi camera stream to begin monitoring and license plate scanning.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex items-center gap-2">
+            <Link className="h-5 w-5 text-muted-foreground" />
+            <Input 
+                placeholder="e.g., http://192.168.1.100:8081"
+                value={streamUrl}
+                onChange={(e) => setStreamUrl(e.target.value)}
+            />
+            <Button onClick={connectStream}>Connect</Button>
+        </div>
+
         <div className="aspect-video w-full bg-secondary rounded-lg overflow-hidden relative border">
-          <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+          <video ref={videoRef} className="w-full h-full object-cover" muted playsInline crossOrigin="anonymous"/>
           <canvas ref={canvasRef} style={{ display: 'none' }} />
-          {hasCameraPermission === false && (
+          {!isStreamActive && (
              <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
                 <CameraOff className="w-16 h-16 text-muted-foreground" />
-                <p className="mt-4 text-lg font-medium text-muted-foreground">Camera access is required</p>
-             </div>
-          )}
-           {hasCameraPermission === null && (
-             <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
-                <p className="text-lg font-medium text-muted-foreground">Connecting to camera...</p>
+                <p className="mt-4 text-lg font-medium text-muted-foreground">Camera stream is offline</p>
+                <p className="text-sm text-muted-foreground">Enter a stream URL and press Connect.</p>
              </div>
           )}
         </div>
 
-        {hasCameraPermission === false && (
-            <Alert variant="destructive">
-              <AlertTitle>Camera Access Required</AlertTitle>
-              <AlertDescription>
-                This feature requires access to a camera. Please enable camera permissions in your browser settings and refresh the page.
-              </AlertDescription>
-            </Alert>
-        )}
          <div className="flex justify-between items-center">
              {identifiedPlate && (
                 <Alert className="max-w-md">
@@ -166,13 +177,12 @@ export default function LiveFeedView() {
                 </Alert>
             )}
             <div className="flex items-center gap-4 ml-auto">
-                <Button variant="outline" onClick={() => window.location.reload()}>Refresh Feed</Button>
                  <div className="flex items-center space-x-2">
                     <Switch 
                         id="autoscan-mode" 
                         checked={isAutoScanOn} 
                         onCheckedChange={setIsAutoScanOn}
-                        disabled={!hasCameraPermission}
+                        disabled={!isStreamActive}
                     />
                     <Label htmlFor="autoscan-mode" className="flex flex-col">
                         <span>Automatic Scanning</span>
@@ -185,3 +195,5 @@ export default function LiveFeedView() {
     </Card>
   );
 }
+
+    
