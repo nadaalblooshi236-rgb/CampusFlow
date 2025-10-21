@@ -19,7 +19,7 @@ export default function LiveFeedView() {
   const [identifiedPlate, setIdentifiedPlate] = useState<string | null>(null);
   const [isAutoScanOn, setIsAutoScanOn] = useState(false);
   const { toast } = useToast();
-  const { vehicles, handleEnterGate, requests } = useAppStore();
+  const { vehicles, handleEnterGate, handleExitGate } = useAppStore();
 
   useEffect(() => {
     const getCameraPermission = async () => {
@@ -66,22 +66,23 @@ export default function LiveFeedView() {
         setIdentifiedPlate(result.licensePlate);
 
         const vehicle = vehicles.find(v => v.plate === result.licensePlate);
-        const request = requests.find(r => r.plate === result.licensePlate && r.status === 'approved');
-
-        if (vehicle && request) {
-            if(vehicle.status !== 'inside') {
-                toast({
-                    title: 'Vehicle Approved',
-                    description: `License Plate ${result.licensePlate} recognized. Opening gate.`,
-                });
-                handleEnterGate(vehicle.id);
-            }
-        } else if (vehicle) {
+        
+        if (vehicle) {
+          if (vehicle.status === 'inside') {
+            // If car is inside, log an exit
             toast({
-                variant: 'destructive',
-                title: 'Vehicle Not Approved',
-                description: `Plate ${result.licensePlate} recognized, but has no approved request.`,
+                title: 'Vehicle Exiting',
+                description: `License Plate ${result.licensePlate} recognized. Recording exit.`,
             });
+            handleExitGate(vehicle.id);
+          } else {
+            // If car is not inside, log an entry
+            toast({
+                title: 'Vehicle Entering',
+                description: `License Plate ${result.licensePlate} recognized. Opening gate.`,
+            });
+            handleEnterGate(vehicle.id);
+          }
         } else {
              toast({
                 variant: 'destructive',
