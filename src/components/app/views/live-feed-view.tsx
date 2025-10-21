@@ -25,13 +25,17 @@ export default function LiveFeedView() {
   
   const connectStream = () => {
     if (videoRef.current && streamUrl) {
+      // A common issue: some streams won't play in a <video> tag directly.
+      // A common workaround is to use an <img> tag for MJPEG streams.
+      // However, we need <video> for canvas capture, so we'll stick with this.
+      // If issues persist, ensuring the stream is CORS-friendly is key.
       videoRef.current.src = streamUrl;
       videoRef.current.play().catch(e => {
         console.error("Error playing stream:", e);
         toast({
           variant: 'destructive',
           title: 'Stream Error',
-          description: 'Could not connect to the video stream. Check the URL and network.',
+          description: 'Could not connect. Check URL, network, and CORS policy on the stream.',
         });
         setIsStreamActive(false);
       });
@@ -66,7 +70,6 @@ export default function LiveFeedView() {
     if (!videoRef.current || !canvasRef.current || !isStreamActive) return;
 
     setLoading(true);
-    // Don't reset identified plate here to keep showing the last scanned one
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -85,13 +88,13 @@ export default function LiveFeedView() {
         
         if (vehicle) {
           if (vehicle.status === 'inside') {
-            toast({
+             toast({
                 title: 'Vehicle Exiting',
                 description: `License Plate ${result.licensePlate} recognized. Recording exit.`,
             });
             handleExitGate(vehicle.id);
           } else {
-            toast({
+             toast({
                 title: 'Vehicle Entering',
                 description: `License Plate ${result.licensePlate} recognized. Opening gate.`,
             });
@@ -106,12 +109,12 @@ export default function LiveFeedView() {
         }
       } catch (error) {
         console.error('Error identifying license plate:', error);
-        if (!isAutoScanOn) {
-            toast({
+         if (!isAutoScanOn) { // Only show error toast on manual scan
+          toast({
             variant: 'destructive',
             title: 'Scan Failed',
             description: 'Could not identify a license plate. Please try again.',
-            });
+          });
         }
       }
     }
@@ -131,7 +134,7 @@ export default function LiveFeedView() {
         clearInterval(intervalId);
       }
     };
-  }, [isAutoScanOn, isStreamActive, loading]);
+  }, [isAutoScanOn, isStreamActive, loading, handleScanPlate]);
 
 
   return (
@@ -147,7 +150,7 @@ export default function LiveFeedView() {
         <div className="flex items-center gap-2">
             <Link className="h-5 w-5 text-muted-foreground" />
             <Input 
-                placeholder="e.g., http://192.168.1.100:8081"
+                placeholder="e.g., http://192.168.1.123:8081/?action=stream"
                 value={streamUrl}
                 onChange={(e) => setStreamUrl(e.target.value)}
             />
@@ -195,5 +198,3 @@ export default function LiveFeedView() {
     </Card>
   );
 }
-
-    
