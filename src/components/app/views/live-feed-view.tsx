@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Video, CameraOff, ScanLine, Loader2, Link } from 'lucide-react';
+import { Video, CameraOff, ScanLine, Loader2, Link, ShieldAlert } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { identifyLicensePlate } from '@/ai/flows/identify-license-plate';
 import { useAppStore } from '@/hooks/use-app-store';
@@ -21,6 +21,7 @@ export default function LiveFeedView() {
   const [isAutoScanOn, setIsAutoScanOn] = useState(false);
   const [streamUrl, setStreamUrl] = useState('');
   const [connectedUrl, setConnectedUrl] = useState('');
+  const [streamError, setStreamError] = useState<string | null>(null);
   const { toast } = useToast();
   const { vehicles, handleEnterGate, handleExitGate } = useAppStore();
   
@@ -34,6 +35,7 @@ export default function LiveFeedView() {
       return;
     }
 
+    setStreamError(null);
     setIsStreamActive(false);
     setConnectedUrl(streamUrl);
     
@@ -46,15 +48,19 @@ export default function LiveFeedView() {
     const image = imageRef.current;
     if (!image) return;
 
-    const handleLoad = () => setIsStreamActive(true);
+    const handleLoad = () => {
+      setIsStreamActive(true);
+      setStreamError(null);
+    };
+
     const handleError = () => {
       setIsStreamActive(false);
-      if (connectedUrl) { 
-        toast({
-          variant: 'destructive',
-          title: 'Stream Error',
-          description: 'Could not connect. Check URL, network, and ensure the streamer is running with CORS enabled.',
-        });
+      if (connectedUrl) {
+        if (connectedUrl.startsWith('http://192.168') || connectedUrl.startsWith('http://10.') || connectedUrl.startsWith('http://172.')) {
+          setStreamError("A direct connection to a local IP address is often blocked by browser security. You may need a secure tunnel like ngrok.");
+        } else {
+          setStreamError('Could not connect. Check URL, network, and ensure the streamer is running with CORS enabled.');
+        }
       }
     };
 
@@ -65,7 +71,7 @@ export default function LiveFeedView() {
       image.removeEventListener('load', handleLoad);
       image.removeEventListener('error', handleError);
     };
-  }, [connectedUrl, toast]);
+  }, [connectedUrl]);
 
 
   const handleScanPlate = async () => {
@@ -76,12 +82,12 @@ export default function LiveFeedView() {
 
     const img = imageRef.current;
     const canvas = canvasRef.current;
+    // Ensure the canvas is the same size as the displayed image
     canvas.width = img.naturalWidth;
     canvas.height = img.naturalHeight;
     const context = canvas.getContext('2d');
     
     if (context) {
-      // Draw the image from the <img> tag to the canvas
       context.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
       const dataUri = canvas.toDataURL('image/jpeg');
       
@@ -151,21 +157,34 @@ export default function LiveFeedView() {
           <Video />
           Gate Camera Live Feed
         </CardTitle>
-        <CardDescription>Enter the network URL of your Raspberry Pi camera stream to begin monitoring and license plate scanning.</CardDescription>
+        <CardDescription>Enter the network URL of your camera stream to begin monitoring and license plate scanning.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-2">
             <Link className="h-5 w-5 text-muted-foreground" />
             <Input 
-                placeholder="e.g., http://192.168.1.123:8081/?action=stream"
+                placeholder="e.g., https://unique-id.ngrok-free.app"
                 value={streamUrl}
                 onChange={(e) => setStreamUrl(e.target.value)}
             />
             <Button onClick={connectStream}>Connect</Button>
         </div>
+        
+        {streamError && (
+          <Alert variant="destructive">
+            <ShieldAlert className="h-4 w-4" />
+            <AlertTitle>Stream Error</AlertTitle>
+            <AlertDescription>
+              <p>{streamError}</p>
+              <a href="https://ngrok.com/" target="_blank" rel="noopener noreferrer" className="underline text-sm font-medium mt-2 inline-block">
+                Learn more about creating a secure tunnel with ngrok.
+              </a>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="aspect-video w-full bg-secondary rounded-lg overflow-hidden relative border">
-          <img ref={imageRef} className="w-full h-full object-contain" crossOrigin="anonymous" alt="Live Stream" />
+          <img ref={imageRef} className="w-full h-full object-contain" crossOrigin="anonymous" alt={isStreamActive ? "Live Stream" : "Stream offline"} />
           
           <canvas ref={canvasRef} style={{ display: 'none' }} />
 
