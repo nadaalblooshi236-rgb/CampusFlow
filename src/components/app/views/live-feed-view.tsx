@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -12,9 +12,7 @@ import { identifyLicensePlate } from '@/ai/flows/identify-license-plate';
 import { useAppStore } from '@/hooks/use-app-store';
 
 export default function LiveFeedView() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
-
   const [streamUrl, setStreamUrl] = useState('');
   const [currentStream, setCurrentStream] = useState('');
   const [streamError, setStreamError] = useState(false);
@@ -27,17 +25,17 @@ export default function LiveFeedView() {
     setStreamError(false);
     setCurrentStream('');
     if (streamUrl) {
-      // We set the stream URL after a short delay to allow the UI to update
+      // Add a small delay to force re-requesting the image
       setTimeout(() => setCurrentStream(streamUrl), 100);
     }
   };
 
   const handleScanPlate = async () => {
-    if (!imageRef.current || !canvasRef.current || streamError || !currentStream) {
+    if (!imageRef.current) {
        toast({
         variant: 'destructive',
         title: 'Scan Failed',
-        description: 'Cannot scan. Please connect to a valid video stream first.',
+        description: 'Cannot scan. Video stream is not available.',
       });
       return;
     }
@@ -46,19 +44,16 @@ export default function LiveFeedView() {
     setIdentifiedPlate(null);
 
     const image = imageRef.current;
-    const canvas = canvasRef.current;
-    
-    // Set canvas dimensions to match the image's displayed size
+    const canvas = document.createElement('canvas');
     canvas.width = image.clientWidth;
     canvas.height = image.clientHeight;
-    
     const context = canvas.getContext('2d');
-    
+
     if (context) {
-      context.drawImage(image, 0, 0, image.clientWidth, image.clientHeight);
-      const dataUri = canvas.toDataURL('image/jpeg');
-      
       try {
+        context.drawImage(image, 0, 0, image.clientWidth, image.clientHeight);
+        const dataUri = canvas.toDataURL('image/jpeg');
+        
         const result = await identifyLicensePlate({ photoDataUri: dataUri });
         const scannedPlate = result.licensePlate;
         setIdentifiedPlate(scannedPlate);
@@ -71,7 +66,7 @@ export default function LiveFeedView() {
               description: `License Plate ${scannedPlate} belongs to ${vehicle.driver}.`,
           });
         } else {
-             toast({
+            toast({
                 variant: 'destructive',
                 title: 'Vehicle Not Registered',
                 description: `Plate ${scannedPlate} is not registered in the system.`,
@@ -82,10 +77,11 @@ export default function LiveFeedView() {
         toast({
             variant: 'destructive',
             title: 'Scan Failed',
-            description: 'The AI model could not identify a license plate. Please try again with a clearer view.',
+            description: 'The AI model could not identify a license plate, or a browser security error occurred. Please try again.',
         });
       }
     }
+    
     setLoading(false);
   };
 
@@ -117,8 +113,8 @@ export default function LiveFeedView() {
                 alt="Live camera feed"
                 layout="fill"
                 objectFit="contain"
-                unoptimized // Important for network streams
-                crossOrigin="anonymous" // Fix for tainted canvas error
+                unoptimized // Important for external URLs and streaming
+                crossOrigin="anonymous" // Solves the "tainted canvas" error
                 onError={() => {
                   console.error("Stream failed to load.");
                   setStreamError(true);
@@ -139,7 +135,6 @@ export default function LiveFeedView() {
                 )}
              </div>
           )}
-          <canvas ref={canvasRef} style={{ display: 'none' }} />
         </div>
 
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
