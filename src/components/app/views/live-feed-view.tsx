@@ -118,6 +118,7 @@ export default function LiveFeedView() {
                 layout="fill"
                 objectFit="contain"
                 unoptimized // Important for network streams
+                crossOrigin="anonymous" // Fix for tainted canvas error
                 onError={() => {
                   console.error("Stream failed to load.");
                   setStreamError(true);
