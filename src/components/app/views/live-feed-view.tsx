@@ -37,16 +37,18 @@ export default function LiveFeedView() {
 
     setStreamError(null);
     setIsStreamActive(false);
-    setConnectedUrl(streamUrl);
     
-    if (imageRef.current) {
-        imageRef.current.src = streamUrl;
+    // Append the stream action if it's not already there for mjpg-streamer URLs
+    if (streamUrl.includes('ngrok') && !streamUrl.includes('?')) {
+        setConnectedUrl(streamUrl + '/?action=stream');
+    } else {
+        setConnectedUrl(streamUrl);
     }
   };
   
   useEffect(() => {
     const image = imageRef.current;
-    if (!image) return;
+    if (!image || !connectedUrl) return;
 
     const handleLoad = () => {
       setIsStreamActive(true);
@@ -56,20 +58,24 @@ export default function LiveFeedView() {
     const handleError = () => {
       setIsStreamActive(false);
       if (connectedUrl) {
-        if (connectedUrl.startsWith('http://192.168') || connectedUrl.startsWith('http://10.') || connectedUrl.startsWith('http://172.')) {
-          setStreamError("A direct connection to a local IP address is often blocked by browser security. You may need a secure tunnel like ngrok.");
+         if (connectedUrl.includes('ngrok')) {
+            setStreamError("ngrok's free plan shows a warning page before the stream. To bypass it, you must start ngrok with a specific user-agent header. Stop your current ngrok process (Ctrl+C) and run this exact command on your Pi: ngrok http 8081 --user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36\"");
+        } else if (connectedUrl.startsWith('http://192.168') || connectedUrl.startsWith('http://10.') || connectedUrl.startsWith('http://172.')) {
+          setStreamError("A direct connection to a local IP address is often blocked by browser security. You must use a secure tunnel like ngrok.");
         } else {
           setStreamError('Could not connect. Check URL, network, and ensure the streamer is running with CORS enabled.');
         }
       }
     };
 
+    image.src = connectedUrl;
     image.addEventListener('load', handleLoad);
     image.addEventListener('error', handleError);
 
     return () => {
       image.removeEventListener('load', handleLoad);
       image.removeEventListener('error', handleError);
+      image.src = ""; // Clean up src
     };
   }, [connectedUrl]);
 
@@ -82,7 +88,6 @@ export default function LiveFeedView() {
 
     const img = imageRef.current;
     const canvas = canvasRef.current;
-    // Ensure the canvas is the same size as the displayed image
     canvas.width = img.naturalWidth;
     canvas.height = img.naturalHeight;
     const context = canvas.getContext('2d');
@@ -173,11 +178,12 @@ export default function LiveFeedView() {
         {streamError && (
           <Alert variant="destructive">
             <ShieldAlert className="h-4 w-4" />
-            <AlertTitle>Stream Error</AlertTitle>
+            <AlertTitle>Stream Connection Error</AlertTitle>
             <AlertDescription>
-              <p>{streamError}</p>
-              <a href="https://ngrok.com/" target="_blank" rel="noopener noreferrer" className="underline text-sm font-medium mt-2 inline-block">
-                Learn more about creating a secure tunnel with ngrok.
+              <p className="font-semibold">This is a common issue with secure tunnels.</p>
+              <p className="mb-2">{streamError}</p>
+              <a href="https://ngrok.com/docs/guides/bypassing-browser-warning-with-a-user-agent-header/" target="_blank" rel="noopener noreferrer" className="underline text-sm font-medium mt-2 inline-block">
+                Click here to learn more about this `ngrok` feature.
               </a>
             </AlertDescription>
           </Alert>
