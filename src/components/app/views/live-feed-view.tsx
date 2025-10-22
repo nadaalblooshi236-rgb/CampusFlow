@@ -39,11 +39,12 @@ export default function LiveFeedView() {
     setIsStreamActive(false);
     
     // Append the stream action if it's not already there for mjpg-streamer URLs
-    if (streamUrl.includes('ngrok') && !streamUrl.includes('?')) {
-        setConnectedUrl(streamUrl + '/?action=stream');
-    } else {
-        setConnectedUrl(streamUrl);
+    let finalUrl = streamUrl;
+    if (streamUrl.includes('ngrok') && !streamUrl.endsWith('?action=stream')) {
+        finalUrl = streamUrl.endsWith('/') ? `${streamUrl}?action=stream` : `${streamUrl}/?action=stream`;
     }
+    
+    setConnectedUrl(finalUrl);
   };
   
   useEffect(() => {
@@ -59,9 +60,9 @@ export default function LiveFeedView() {
       setIsStreamActive(false);
       if (connectedUrl) {
          if (connectedUrl.includes('ngrok')) {
-            setStreamError("ngrok's free plan shows a warning page before the stream. To bypass it, you must start ngrok with a specific user-agent header. Stop your current ngrok process (Ctrl+C) and run this exact command on your Pi: ngrok http 8081 --user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36\"");
+            setStreamError("ngrok's free plan shows a warning page before the stream. To bypass it, you must add a special header when starting ngrok. Stop your current ngrok process (Ctrl+C) and run this exact command on your Pi: ngrok http 8081 --request-header-add \"ngrok-skip-browser-warning:true\"");
         } else if (connectedUrl.startsWith('http://192.168') || connectedUrl.startsWith('http://10.') || connectedUrl.startsWith('http://172.')) {
-          setStreamError("A direct connection to a local IP address is often blocked by browser security. You must use a secure tunnel like ngrok.");
+          setStreamError("A direct connection to a local IP address from a secure website is often blocked by browser security. You must use a secure tunnel like ngrok.");
         } else {
           setStreamError('Could not connect. Check URL, network, and ensure the streamer is running with CORS enabled.');
         }
@@ -180,9 +181,8 @@ export default function LiveFeedView() {
             <ShieldAlert className="h-4 w-4" />
             <AlertTitle>Stream Connection Error</AlertTitle>
             <AlertDescription>
-              <p className="font-semibold">This is a common issue with secure tunnels.</p>
               <p className="mb-2">{streamError}</p>
-              <a href="https://ngrok.com/docs/guides/bypassing-browser-warning-with-a-user-agent-header/" target="_blank" rel="noopener noreferrer" className="underline text-sm font-medium mt-2 inline-block">
+              <a href="https://ngrok.com/docs/guides/bypassing-browser-warning-with-a-custom-header/" target="_blank" rel="noopener noreferrer" className="underline text-sm font-medium mt-2 inline-block">
                 Click here to learn more about this `ngrok` feature.
               </a>
             </AlertDescription>
