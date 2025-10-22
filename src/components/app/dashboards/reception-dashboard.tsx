@@ -6,6 +6,7 @@ import RecentActivity from "@/components/app/shared/recent-activity";
 import PickupRequestsList from "@/components/app/shared/pickup-requests-list";
 import VehiclesOnCampus from "@/components/app/shared/vehicles-on-campus";
 import TrafficPrediction from "@/components/app/shared/traffic-prediction";
+import HardwareStatus from "@/components/app/shared/hardware-status";
 
 export default function ReceptionDashboard() {
   return (
@@ -15,6 +16,7 @@ export default function ReceptionDashboard() {
           <GateStatus />
         </div>
         <div className="space-y-6">
+          <HardwareStatus />
           <StatsCard />
           <RecentActivity />
         </div>

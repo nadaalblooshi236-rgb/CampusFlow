@@ -1,8 +1,9 @@
 "use client";
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import type { User, UserRole, Vehicle, PickupRequest, Notification, Attendance } from '@/lib/types';
 import { initialVehicles, initialRequests, initialNotifications, initialAttendance } from '@/lib/data';
 import { useToast } from "@/hooks/use-toast";
+import mqtt, { MqttClient } from 'mqtt';
 
 interface AppState {
   activeTab: string;
@@ -28,9 +29,14 @@ interface AppState {
   approveRequest: (requestId: number) => void;
   denyRequest: (requestId: number) => void;
   submitRequest: (newRequest: Omit<PickupRequest, 'id' | 'lastUpdated'>) => void;
+  mqttStatus: 'connected' | 'disconnected' | 'connecting' | 'error';
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
+
+const MQTT_BROKER_URL = 'wss://broker.emqx.io:8084/mqtt';
+const GATE_TOPIC = 'ats/smartgate/gate';
+const LED_TOPIC = 'ats/smartgate/led';
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
@@ -45,6 +51,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [gateStatus, setGateStatus] = useState<'open' | 'closed'>("closed");
   const [currentCapacity, setCurrentCapacity] = useState(vehicles.filter(v => v.status === 'inside').length);
   const [maxCapacity] = useState(50);
+  
+  const [mqttStatus, setMqttStatus] = useState<'connected' | 'disconnected' | 'connecting' | 'error'>('disconnected');
+  const clientRef = useRef<MqttClient | null>(null);
+
+  useEffect(() => {
+    setMqttStatus('connecting');
+    const client = mqtt.connect(MQTT_BROKER_URL);
+    clientRef.current = client;
+
+    client.on('connect', () => {
+      setMqttStatus('connected');
+      toast({ title: "Hardware Control", description: "Connected to Pi controller."});
+    });
+
+    client.on('error', (err) => {
+      console.error('MQTT connection error:', err);
+      setMqttStatus('error');
+      client.end();
+    });
+    
+    client.on('offline', () => {
+        setMqttStatus('disconnected');
+    });
+
+    return () => {
+      if (client) {
+        client.end();
+      }
+    };
+  }, [toast]);
+  
+  const publish = (topic: string, message: string) => {
+    if (clientRef.current && clientRef.current.connected) {
+      clientRef.current.publish(topic, message);
+    }
+  }
+  
+  useEffect(() => {
+    if (currentCapacity >= maxCapacity) {
+      publish(LED_TOPIC, 'flash');
+    } else {
+      publish(LED_TOPIC, 'off');
+    }
+  }, [currentCapacity, maxCapacity]);
 
   const addNotification = (notif: Omit<Notification, 'id'>) => {
     const newNotif = { ...notif, id: Date.now() };
@@ -54,9 +104,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
       description: notif.message,
     });
   };
+  
+  const operateGate = () => {
+    publish(GATE_TOPIC, 'open');
+    setGateStatus("open");
+    setTimeout(() => {
+      publish(GATE_TOPIC, 'close');
+      setGateStatus("closed");
+    }, 4000); // Gate stays open for 4 seconds
+  }
 
   const handleEnterGate = (vehicleId: number) => {
-    if (currentCapacity >= maxCapacity) return;
+    if (currentCapacity >= maxCapacity) {
+      toast({ variant: 'destructive', title: "Campus Full", description: "Cannot allow entry, capacity reached."});
+      return;
+    };
     
     const vehicle = vehicles.find(v => v.id === vehicleId);
     if (!vehicle || vehicle.status === 'inside') return;
@@ -68,9 +130,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ));
     
     setCurrentCapacity(prev => prev + 1);
-    setGateStatus("open");
-    
-    setTimeout(() => setGateStatus("closed"), 3000);
+    operateGate();
     
     addNotification({ message: `Vehicle ${vehicle.plate} has entered campus`, time: now, type: "entry" });
     
@@ -90,9 +150,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ));
     
     setCurrentCapacity(prev => Math.max(0, prev - 1));
-    setGateStatus("open");
-    
-    setTimeout(() => setGateStatus("closed"), 3000);
+    operateGate();
     
     addNotification({ message: `Vehicle ${vehicle.plate} has exited campus`, time: now, type: "exit" });
     
@@ -172,7 +230,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if(currentUser.type !== 'reception') return; // Only run simulation for reception view
       const randomEvent = Math.random();
       
-      if (randomEvent < 0.1 && currentCapacity < maxCapacity) {
+      if (randomEvent < 0.1) {
         const enteringVehicle = vehicles.find(v => v.status === "registered");
         if(enteringVehicle) handleEnterGate(enteringVehicle.id);
       } else if (randomEvent > 0.9) {
@@ -212,6 +270,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     approveRequest,
     denyRequest,
     submitRequest,
+    mqttStatus,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
