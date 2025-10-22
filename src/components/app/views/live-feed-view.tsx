@@ -4,97 +4,79 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Video, CameraOff, ScanLine, Loader2, Link, ShieldAlert } from 'lucide-react';
+import { Video, CameraOff, ScanLine, Loader2, ShieldAlert } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { identifyLicensePlate } from '@/ai/flows/identify-license-plate';
 import { useAppStore } from '@/hooks/use-app-store';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 
 export default function LiveFeedView() {
-  const imageRef = useRef<HTMLImageElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [hasCameraPermission, setHasCameraPermission] = useState(true);
   const [isStreamActive, setIsStreamActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [identifiedPlate, setIdentifiedPlate] = useState<string | null>(null);
   const [isAutoScanOn, setIsAutoScanOn] = useState(false);
-  const [streamUrl, setStreamUrl] = useState('');
-  const [connectedUrl, setConnectedUrl] = useState('');
-  const [streamError, setStreamError] = useState<string | null>(null);
   const { toast } = useToast();
   const { vehicles, handleEnterGate, handleExitGate } = useAppStore();
-  
-  const connectStream = () => {
-    if (!streamUrl) {
-      toast({
-        variant: 'destructive',
-        title: 'No URL',
-        description: 'Please enter a stream URL.',
-      });
-      return;
-    }
 
-    setStreamError(null);
-    setIsStreamActive(false);
-    
-    // Append the stream action if it's not already there for mjpg-streamer URLs
-    let finalUrl = streamUrl;
-    if (streamUrl.includes('ngrok') && !streamUrl.endsWith('?action=stream')) {
-        finalUrl = streamUrl.endsWith('/') ? `${streamUrl}?action=stream` : `${streamUrl}/?action=stream`;
-    }
-    
-    setConnectedUrl(finalUrl);
-  };
-  
   useEffect(() => {
-    const image = imageRef.current;
-    if (!image || !connectedUrl) return;
-
-    const handleLoad = () => {
-      setIsStreamActive(true);
-      setStreamError(null);
-    };
-
-    const handleError = () => {
-      setIsStreamActive(false);
-      if (connectedUrl) {
-         if (connectedUrl.includes('ngrok')) {
-            setStreamError("ngrok's free plan shows a warning page before the stream. To bypass it, you must add a special header when starting ngrok. Stop your current ngrok process (Ctrl+C) and run this exact command on your Pi: ngrok http 8081 --request-header-add \"ngrok-skip-browser-warning:true\"");
-        } else if (connectedUrl.startsWith('http://192.168') || connectedUrl.startsWith('http://10.') || connectedUrl.startsWith('http://172.')) {
-          setStreamError("A direct connection to a local IP address from a secure website is often blocked by browser security. You must use a secure tunnel like ngrok.");
-        } else {
-          setStreamError('Could not connect. Check URL, network, and ensure the streamer is running with CORS enabled.');
+    const getCameraPermission = async () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast({
+          variant: 'destructive',
+          title: 'Camera Not Supported',
+          description: 'Your browser does not support camera access.',
+        });
+        setHasCameraPermission(false);
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.onloadedmetadata = () => {
+            setIsStreamActive(true);
+          };
         }
+        setHasCameraPermission(true);
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        setHasCameraPermission(false);
+        toast({
+          variant: 'destructive',
+          title: 'Camera Access Denied',
+          description: 'Please enable camera permissions in your browser settings to use the live feed.',
+        });
       }
     };
 
-    image.src = connectedUrl;
-    image.addEventListener('load', handleLoad);
-    image.addEventListener('error', handleError);
+    getCameraPermission();
 
     return () => {
-      image.removeEventListener('load', handleLoad);
-      image.removeEventListener('error', handleError);
-      image.src = ""; // Clean up src
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
     };
-  }, [connectedUrl]);
-
+  }, [toast]);
 
   const handleScanPlate = async () => {
-    if (!imageRef.current || !canvasRef.current || !isStreamActive) return;
+    if (!videoRef.current || !canvasRef.current || !isStreamActive) return;
 
     setLoading(true);
     setIdentifiedPlate(null);
 
-    const img = imageRef.current;
+    const video = videoRef.current;
     const canvas = canvasRef.current;
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     const context = canvas.getContext('2d');
     
     if (context) {
-      context.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
+      context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
       const dataUri = canvas.toDataURL('image/jpeg');
       
       try {
@@ -105,19 +87,11 @@ export default function LiveFeedView() {
         const vehicle = vehicles.find(v => v.plate === scannedPlate);
         
         if (vehicle) {
-          if (vehicle.status === 'inside') {
-             toast({
-                title: 'Vehicle Exiting',
-                description: `License Plate ${scannedPlate} recognized. Recording exit.`,
-            });
-            handleExitGate(vehicle.id);
-          } else {
-             toast({
-                title: 'Vehicle Entering',
-                description: `License Plate ${scannedPlate} recognized. Opening gate.`,
-            });
-            handleEnterGate(vehicle.id);
-          }
+          toast({
+              title: 'Vehicle Recognized',
+              description: `License Plate ${scannedPlate} belongs to ${vehicle.driver}.`,
+          });
+          // Logic for entry/exit can be added here
         } else {
              toast({
                 variant: 'destructive',
@@ -155,7 +129,6 @@ export default function LiveFeedView() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAutoScanOn, isStreamActive, loading]);
 
-
   return (
     <Card>
       <CardHeader>
@@ -163,42 +136,18 @@ export default function LiveFeedView() {
           <Video />
           Gate Camera Live Feed
         </CardTitle>
-        <CardDescription>Enter the network URL of your camera stream to begin monitoring and license plate scanning.</CardDescription>
+        <CardDescription>Using your local webcam for license plate scanning. Please grant camera permission when prompted.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center gap-2">
-            <Link className="h-5 w-5 text-muted-foreground" />
-            <Input 
-                placeholder="e.g., https://unique-id.ngrok-free.app"
-                value={streamUrl}
-                onChange={(e) => setStreamUrl(e.target.value)}
-            />
-            <Button onClick={connectStream}>Connect</Button>
-        </div>
-        
-        {streamError && (
-          <Alert variant="destructive">
-            <ShieldAlert className="h-4 w-4" />
-            <AlertTitle>Stream Connection Error</AlertTitle>
-            <AlertDescription>
-              <p className="mb-2">{streamError}</p>
-              <a href="https://ngrok.com/docs/guides/bypassing-browser-warning-with-a-custom-header/" target="_blank" rel="noopener noreferrer" className="underline text-sm font-medium mt-2 inline-block">
-                Click here to learn more about this `ngrok` feature.
-              </a>
-            </AlertDescription>
-          </Alert>
-        )}
-
         <div className="aspect-video w-full bg-secondary rounded-lg overflow-hidden relative border">
-          <img ref={imageRef} className="w-full h-full object-contain" crossOrigin="anonymous" alt={isStreamActive ? "Live Stream" : "Stream offline"} />
-          
+          <video ref={videoRef} className="w-full h-full object-contain" autoPlay muted playsInline />
           <canvas ref={canvasRef} style={{ display: 'none' }} />
 
           {!isStreamActive && (
              <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
                 <CameraOff className="w-16 h-16 text-muted-foreground" />
-                <p className="mt-4 text-lg font-medium text-muted-foreground">Camera stream is offline</p>
-                <p className="text-sm text-muted-foreground">Enter a stream URL and press Connect.</p>
+                <p className="mt-4 text-lg font-medium text-muted-foreground">Camera is offline</p>
+                {!hasCameraPermission && <p className="text-sm text-muted-foreground">Camera permission was denied. Please enable it in your browser settings.</p>}
              </div>
           )}
         </div>
