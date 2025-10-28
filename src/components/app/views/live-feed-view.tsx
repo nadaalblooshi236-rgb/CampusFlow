@@ -5,14 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Video, CameraOff, ScanLine, Loader2, Info, CheckCircle, RefreshCw } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from '@/hooks/use-app-store';
 
 export default function LiveFeedView() {
   const imageRef = useRef<HTMLImageElement>(null);
-  const [streamUrl, setStreamUrl] = useState('http://172.20.10.3:8081');
+  const [streamUrl, setStreamUrl] = useState('');
   const [currentStream, setCurrentStream] = useState('');
   const [streamError, setStreamError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -26,7 +25,7 @@ export default function LiveFeedView() {
     if (!currentStream || !autoRefresh || streamError) return;
 
     const interval = setInterval(() => {
-      if (imageRef.current && streamUrl) {
+      if (imageRef.current) {
         // Always use the proxy and add a timestamp to prevent caching
         const finalUrl = `/api/camera-proxy?url=${encodeURIComponent(streamUrl)}&t=${Date.now()}`;
         imageRef.current.src = finalUrl;
@@ -241,3 +240,5 @@ export default function LiveFeedView() {
     </Card>
   );
 }
+
+    
