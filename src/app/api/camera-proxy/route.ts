@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   try {
     // Fetch the camera stream with timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout (increased from 5)
 
     const response = await fetch(cameraUrl, {
       headers: {
@@ -47,24 +47,42 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Camera proxy error:', error);
+    // Check for expected connection errors (including nested errors in cause)
+    const errorCode = error.code || error.cause?.code;
+    const errorName = error.name || error.cause?.name;
+
+    const isExpectedError = errorName === 'AbortError' ||
+                           errorCode === 'ECONNREFUSED' ||
+                           errorCode === 'ECONNRESET' ||
+                           errorCode === 'ETIMEDOUT' ||
+                           errorCode === 'ENOTFOUND' ||
+                           errorCode === 'EAI_AGAIN' ||
+                           error.message?.includes('terminated');
+
+    // Only log unexpected errors to reduce console noise
+    if (!isExpectedError) {
+      console.error('Camera proxy unexpected error:', error);
+    }
 
     let errorMessage = 'Failed to fetch camera stream';
     let errorDetails = error instanceof Error ? error.message : 'Unknown error';
 
     // Provide specific error messages
-    if (error.name === 'AbortError') {
+    if (errorName === 'AbortError') {
       errorMessage = 'Connection timeout';
-      errorDetails = `Cannot reach camera at ${cameraUrl}. The camera may be offline or not accessible from this server.`;
-    } else if (error.code === 'UND_ERR_CONNECT_TIMEOUT') {
+      errorDetails = `Cannot reach camera. The camera may be offline or not accessible from this server.`;
+    } else if (errorCode === 'ECONNRESET' || error.message?.includes('terminated')) {
+      errorMessage = 'Connection reset';
+      errorDetails = `Camera connection was reset. The camera may be offline or not accessible.`;
+    } else if (errorCode === 'UND_ERR_CONNECT_TIMEOUT' || errorCode === 'ETIMEDOUT') {
       errorMessage = 'Connection timeout';
-      errorDetails = `Cannot connect to ${cameraUrl}. Please verify the camera is on the same network and accessible.`;
-    } else if (error.code === 'ECONNREFUSED') {
+      errorDetails = `Cannot connect to camera. Please verify the camera is on the same network and accessible.`;
+    } else if (errorCode === 'ECONNREFUSED') {
       errorMessage = 'Connection refused';
-      errorDetails = `Camera at ${cameraUrl} refused the connection. Check if the camera service is running.`;
-    } else if (error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN') {
+      errorDetails = `Camera refused the connection. Check if the camera service is running.`;
+    } else if (errorCode === 'ENOTFOUND' || errorCode === 'EAI_AGAIN') {
       errorMessage = 'Host not found';
-      errorDetails = `Cannot resolve hostname. Check if ${cameraUrl} is correct.`;
+      errorDetails = `Cannot resolve hostname. Check if the camera URL is correct.`;
     }
 
     return NextResponse.json(
