@@ -28,6 +28,24 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'http',
+        hostname: '172.20.10.3',
+        port: '8081',
+        pathname: '/**',
+      },
+      {
+        protocol: 'http',
+        hostname: '**', // Allow any HTTP hostname for camera streams
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**', // Allow any HTTPS hostname (for ngrok URLs)
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };
