@@ -12,7 +12,7 @@ import { useAppStore } from '@/hooks/use-app-store';
 
 export default function LiveFeedView() {
   const imageRef = useRef<HTMLImageElement>(null);
-  const [streamUrl, setStreamUrl] = useState('');
+  const [streamUrl, setStreamUrl] = useState('http://172.20.10.3:8081');
   const [currentStream, setCurrentStream] = useState('');
   const [streamError, setStreamError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
