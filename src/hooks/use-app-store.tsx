@@ -64,49 +64,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     
     setMqttStatus('connecting');
-    const client = mqtt.connect(MQTT_BROKER_URL, {
-      reconnectPeriod: 1000,
-      connectTimeout: 10 * 1000, // 10 seconds
-    });
-    
-    clientRef.current = client;
+    try {
+      const client = mqtt.connect(MQTT_BROKER_URL, {
+        reconnectPeriod: 1000,
+        connectTimeout: 10 * 1000,
+      });
+      
+      clientRef.current = client;
 
-    const onConnect = () => {
-      setMqttStatus('connected');
-      toast({ title: "Hardware Control", description: "Successfully connected to Pi controller." });
-    };
+      client.on('connect', () => {
+        setMqttStatus('connected');
+        toast({ title: "Hardware Control", description: "Successfully connected to Pi controller." });
+      });
 
-    const onError = (err: Error) => {
-      console.error('MQTT connection error:', err);
-      setMqttStatus('error');
-      // The client will attempt to reconnect automatically.
-      // We don't need to end the client here.
-    };
+      client.on('error', (err) => {
+        console.error('MQTT connection error:', err);
+        setMqttStatus('error');
+        // The client will attempt to reconnect automatically. We don't need to end it.
+      });
 
-    const onOffline = () => {
-      setMqttStatus('disconnected');
-    };
+      client.on('offline', () => {
+        setMqttStatus('disconnected');
+      });
 
-    const onReconnect = () => {
-      setMqttStatus('connecting');
-    };
+      client.on('reconnect', () => {
+        setMqttStatus('connecting');
+      });
 
-    client.on('connect', onConnect);
-    client.on('error', onError);
-    client.on('offline', onOffline);
-    client.on('reconnect', onReconnect);
+    } catch (error) {
+       console.error('MQTT failed to connect', error);
+       setMqttStatus('error');
+    }
 
     // Cleanup function: this will be called when the component unmounts.
     return () => {
       if (clientRef.current) {
-        // Remove all listeners to prevent memory leaks
-        clientRef.current.removeListener('connect', onConnect);
-        clientRef.current.removeListener('error', onError);
-        clientRef.current.removeListener('offline', onOffline);
-        clientRef.current.removeListener('reconnect', onReconnect);
-        // End the connection
-        clientRef.current.end(true);
-        clientRef.current = null;
+        // End the connection gracefully
+        clientRef.current.end(true, () => {
+           clientRef.current = null;
+        });
       }
     };
   }, [toast]);
@@ -120,23 +116,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       });
     } else {
-        toast({ variant: 'destructive', title: 'Hardware Disconnected', description: 'Cannot send command. Check connection.'});
+        toast({ variant: 'destructive', title: 'Hardware Disconnected', description: 'Cannot send command. Check connection status.'});
     }
   }
   
   const addNotification = (notif: Omit<Notification, 'id' | 'time'>) => {
     const newNotif = { ...notif, id: Date.now() + Math.random(), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
     setNotifications(prev => [newNotif, ...prev]);
-    toast({
-      title: "New Activity",
-      description: notif.message,
-    });
   };
   
   const operateGate = () => {
     publish(GATE_TOPIC, '90'); // 90 degrees to open
     setGateStatus("open");
     addNotification({ message: 'Gate opening command sent.', type: 'entry' });
+    
     setTimeout(() => {
       publish(GATE_TOPIC, '0'); // 0 degrees to close
       setGateStatus("closed");
@@ -164,6 +157,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     operateGate();
     
     addNotification({ message: `Vehicle ${vehicle.plate} has entered campus`, type: "entry" });
+    toast({ title: 'Vehicle Entry', description: `Vehicle ${vehicle.plate} has entered.`});
     
     setAttendance(prev => prev.map(record => 
       record.vehicleId === vehicleId ? { ...record, entry: now, status: "present" } : record
@@ -258,39 +252,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         time: newRequest.time, 
         type: "request" 
     });
-    setActiveTab('dashboard'); // Or some confirmation view
+    toast({ title: 'Request Submitted', description: 'Your pickup request has been sent for approval.' });
+    setActiveTab('dashboard');
   }
-
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if(currentUser.type !== 'reception') return; // Only run simulation for reception view
-      
-      if(currentCapacity >= maxCapacity) {
-        publish(LED_TOPIC, 'flash');
-      } else {
-        publish(LED_TOPIC, 'off');
-      }
-
-      const randomEvent = Math.random();
-      
-      // Reduce frequency of automatic events to avoid being too noisy
-      if (randomEvent < 0.05) { 
-        const enteringVehicle = vehicles.find(v => v.status === "registered");
-        if(enteringVehicle) handleEnterGate(enteringVehicle.id);
-      } else if (randomEvent > 0.95) {
-        const insideVehicles = vehicles.filter(v => v.status === "inside");
-        if (insideVehicles.length > 0) {
-          const randomVehicle = insideVehicles[Math.floor(Math.random() * insideVehicles.length)];
-          handleExitGate(randomVehicle.id);
-        }
-      }
-    }, 20000); // Increased interval to 20 seconds
-
-    return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentCapacity, maxCapacity, vehicles, currentUser.type]);
-
 
   const value = {
     activeTab,
