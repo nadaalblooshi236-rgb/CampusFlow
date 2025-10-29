@@ -80,7 +80,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       client.on('error', (err) => {
         console.error('MQTT connection error:', err);
         setMqttStatus('error');
-        // The client will automatically try to reconnect. We don't need to end it.
+        // The client will automatically try to reconnect. We don't need to end it here.
       });
 
       client.on('offline', () => {
@@ -117,8 +117,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
   
-  const addNotification = (notif: Omit<Notification, 'id'>) => {
-    const newNotif = { ...notif, id: Date.now() };
+  const addNotification = (notif: Omit<Notification, 'id' | 'time'>) => {
+    const newNotif = { ...notif, id: Date.now() + Math.random(), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
     setNotifications(prev => [newNotif, ...prev]);
     toast({
       title: "New Activity",
@@ -129,11 +129,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const operateGate = () => {
     publish(GATE_TOPIC, '90'); // 90 degrees to open
     setGateStatus("open");
-    addNotification({ message: 'Gate opening command sent.', time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), type: 'entry' });
+    addNotification({ message: 'Gate opening command sent.', type: 'entry' });
     setTimeout(() => {
       publish(GATE_TOPIC, '0'); // 0 degrees to close
       setGateStatus("closed");
-      addNotification({ message: 'Gate closing command sent.', time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), type: 'exit' });
+      addNotification({ message: 'Gate closing command sent.', type: 'exit' });
     }, 4000); // Gate stays open for 4 seconds
   }
 
@@ -156,7 +156,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCurrentCapacity(prev => prev + 1);
     operateGate();
     
-    addNotification({ message: `Vehicle ${vehicle.plate} has entered campus`, time: now, type: "entry" });
+    addNotification({ message: `Vehicle ${vehicle.plate} has entered campus`, type: "entry" });
     
     setAttendance(prev => prev.map(record => 
       record.vehicleId === vehicleId ? { ...record, entry: now, status: "present" } : record
@@ -182,7 +182,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCurrentCapacity(prev => Math.max(0, prev - 1));
     operateGate();
     
-    addNotification({ message: `Vehicle ${vehicle.plate} has exited campus`, time: now, type: "exit" });
+    addNotification({ message: `Vehicle ${vehicle.plate} has exited campus`, type: "exit" });
     
     setAttendance(prev => prev.map(record => 
       record.vehicleId === vehicleId ? { ...record, exit: now } : record
@@ -217,7 +217,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         lastUpdated: Date.now()
       } : req
     ));
-    addNotification({ message: `Pickup request approved for ${request.plate}`, time: now, type: "approval" });
+    addNotification({ message: `Pickup request approved for ${request.plate}`, type: "approval" });
   };
 
   const denyRequest = (requestId: number) => {
@@ -236,7 +236,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         lastUpdated: Date.now()
       } : req
     ));
-    addNotification({ message: `Pickup request denied for ${request.plate}`, time: now, type: "denial" });
+    addNotification({ message: `Pickup request denied for ${request.plate}`, type: "denial" });
   };
 
   const submitRequest = (newRequestData: Omit<PickupRequest, 'id' | 'lastUpdated'>) => {
@@ -324,3 +324,5 @@ export function useAppStore() {
   }
   return context;
 }
+
+    
