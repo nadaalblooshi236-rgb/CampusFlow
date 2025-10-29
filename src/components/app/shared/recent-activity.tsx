@@ -27,8 +27,8 @@ export default function RecentActivity() {
       <CardContent>
         <ScrollArea className="h-64">
           <div className="space-y-3">
-            {notifications.slice(0, 10).map((note) => (
-              <div key={note.id} className="flex items-start space-x-3 p-3 bg-secondary rounded-lg">
+            {notifications.slice(0, 10).map((note, index) => (
+              <div key={`${note.id}-${index}`} className="flex items-start space-x-3 p-3 bg-secondary rounded-lg">
                 <div className={cn("w-2 h-2 rounded-full mt-1.5 flex-shrink-0", getIconColor(note.type))}></div>
                 <div className="flex-1">
                   <p className="text-sm text-foreground">{note.message}</p>
