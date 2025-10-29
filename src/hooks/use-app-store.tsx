@@ -1,3 +1,4 @@
+
 "use client";
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import type { User, UserRole, Vehicle, PickupRequest, Notification, Attendance } from '@/lib/types';
@@ -58,53 +59,61 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const clientRef = useRef<MqttClient | null>(null);
 
   useEffect(() => {
-    // This effect should only run once on mount to initialize and clean up the MQTT client.
-    if (clientRef.current) {
-      return; // Already initialized
-    }
-    
+    if (clientRef.current) return;
+
     setMqttStatus('connecting');
     try {
       const client = mqtt.connect(MQTT_BROKER_URL, {
         reconnectPeriod: 1000,
         connectTimeout: 10 * 1000,
       });
-      
+
       clientRef.current = client;
 
-      client.on('connect', () => {
+      const handleConnect = () => {
         setMqttStatus('connected');
         toast({ title: "Hardware Control", description: "Successfully connected to Pi controller." });
-      });
+      };
 
-      client.on('error', (err) => {
+      const handleError = (err: Error) => {
         console.error('MQTT connection error:', err);
         setMqttStatus('error');
-        // The client will attempt to reconnect automatically. We don't need to end it.
-      });
+        // The client will attempt to reconnect automatically if not explicitly ended.
+        // We don't end the client here to allow for retries.
+      };
 
-      client.on('offline', () => {
+      const handleOffline = () => {
         setMqttStatus('disconnected');
-      });
-
-      client.on('reconnect', () => {
+      };
+      
+      const handleReconnect = () => {
         setMqttStatus('connecting');
-      });
+      };
 
+      client.on('connect', handleConnect);
+      client.on('error', handleError);
+      client.on('offline', handleOffline);
+      client.on('reconnect', handleReconnect);
+
+      // Cleanup function to run on component unmount
+      return () => {
+        if (clientRef.current) {
+          // Remove listeners to prevent memory leaks
+          clientRef.current.removeListener('connect', handleConnect);
+          clientRef.current.removeListener('error', handleError);
+          clientRef.current.removeListener('offline', handleOffline);
+          clientRef.current.removeListener('reconnect', handleReconnect);
+          
+          // End the connection gracefully
+          clientRef.current.end(true, () => {
+             clientRef.current = null;
+          });
+        }
+      };
     } catch (error) {
-       console.error('MQTT failed to connect', error);
+       console.error('MQTT failed to connect on initial setup', error);
        setMqttStatus('error');
     }
-
-    // Cleanup function: this will be called when the component unmounts.
-    return () => {
-      if (clientRef.current) {
-        // End the connection gracefully
-        clientRef.current.end(true, () => {
-           clientRef.current = null;
-        });
-      }
-    };
   }, [toast]);
   
   const publish = (topic: string, message: string) => {
@@ -295,3 +304,5 @@ export function useAppStore() {
   }
   return context;
 }
+
+    
