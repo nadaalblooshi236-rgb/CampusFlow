@@ -54,32 +54,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [currentCapacity, setCurrentCapacity] = useState(vehicles.filter(v => v.status === 'inside').length);
   const [maxCapacity] = useState(50);
   
-  const [mqttStatus, setMqttStatus] = useState<'connected' | 'disconnected' | 'connecting' | 'error'>('disconnected');
+  const [mqttStatus, setMqttStatus] = useState<'connected' | 'disconnected' | 'connecting' | 'error'>('connecting');
   const clientRef = useRef<MqttClient | null>(null);
 
   useEffect(() => {
+    if (clientRef.current) return;
+
     setMqttStatus('connecting');
-    const client = mqtt.connect(MQTT_BROKER_URL);
-    clientRef.current = client;
+    try {
+      const client = mqtt.connect(MQTT_BROKER_URL);
+      clientRef.current = client;
 
-    client.on('connect', () => {
-      setMqttStatus('connected');
-      toast({ title: "Hardware Control", description: "Connected to Pi controller."});
-    });
+      client.on('connect', () => {
+        setMqttStatus('connected');
+        toast({ title: "Hardware Control", description: "Connected to Pi controller." });
+      });
 
-    client.on('error', (err) => {
-      console.error('MQTT connection error:', err);
-      setMqttStatus('error');
-      client.end();
-    });
-    
-    client.on('offline', () => {
+      client.on('error', (err) => {
+        console.error('MQTT connection error:', err);
+        setMqttStatus('error');
+        client.end();
+      });
+
+      client.on('offline', () => {
         setMqttStatus('disconnected');
-    });
+      });
+      
+      client.on('reconnect', () => {
+        setMqttStatus('connecting');
+      });
+
+    } catch (error) {
+      console.error("Failed to initialize MQTT client:", error);
+      setMqttStatus('error');
+    }
 
     return () => {
-      if (client) {
-        client.end();
+      if (clientRef.current) {
+        clientRef.current.end();
+        clientRef.current = null;
       }
     };
   }, [toast]);
@@ -302,3 +315,5 @@ export function useAppStore() {
   }
   return context;
 }
+
+    
