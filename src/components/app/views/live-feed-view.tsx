@@ -37,7 +37,7 @@ export default function LiveFeedView() {
   const [identifiedPlate, setIdentifiedPlate] = useState<string | null>(null);
   
   const { toast } = useToast();
-  const { vehicles } = useAppStore();
+  const { vehicles, handleEnterGate } = useAppStore();
 
   const cleanupLocalStream = useCallback(() => {
     if (videoRef.current && videoRef.current.srcObject) {
@@ -184,8 +184,9 @@ export default function LiveFeedView() {
       if (vehicle) {
         toast({
             title: 'Vehicle Recognized ✅',
-            description: `License Plate ${scannedPlate} belongs to ${vehicle.driver}.`,
+            description: `License Plate ${scannedPlate} belongs to ${vehicle.driver}. Opening gate...`,
         });
+        handleEnterGate(vehicle.id);
       } else {
           toast({
               variant: 'destructive',
