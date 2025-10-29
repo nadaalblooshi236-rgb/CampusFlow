@@ -110,14 +110,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
   
-  useEffect(() => {
-    if (currentCapacity >= maxCapacity) {
-      publish(LED_TOPIC, 'flash');
-    } else {
-      publish(LED_TOPIC, 'off');
-    }
-  }, [currentCapacity, maxCapacity]);
-
   const addNotification = (notif: Omit<Notification, 'id'>) => {
     const newNotif = { ...notif, id: Date.now() };
     setNotifications(prev => [newNotif, ...prev]);
@@ -141,6 +133,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const handleEnterGate = (vehicleId: number) => {
     if (currentCapacity >= maxCapacity) {
       toast({ variant: 'destructive', title: "Campus Full", description: "Cannot allow entry, capacity reached."});
+      publish(LED_TOPIC, 'flash');
       return;
     };
     
@@ -258,6 +251,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const interval = setInterval(() => {
       if(currentUser.type !== 'reception') return; // Only run simulation for reception view
+      
+      if(currentCapacity >= maxCapacity) {
+        publish(LED_TOPIC, 'flash');
+      } else {
+        publish(LED_TOPIC, 'off');
+      }
+
       const randomEvent = Math.random();
       
       if (randomEvent < 0.1) {
@@ -273,7 +273,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }, 15000);
 
     return () => clearInterval(interval);
-  }, [currentCapacity, vehicles, currentUser.type]);
+  }, [currentCapacity, maxCapacity, vehicles, currentUser.type, handleEnterGate, handleExitGate]);
 
 
   const value = {
