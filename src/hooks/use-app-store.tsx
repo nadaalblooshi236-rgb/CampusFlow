@@ -58,22 +58,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const clientRef = useRef<MqttClient | null>(null);
 
   useEffect(() => {
-    if (clientRef.current) return;
+    // Only run this on the client
+    if (typeof window === 'undefined') return;
 
+    if (clientRef.current) return;
+    
     setMqttStatus('connecting');
     try {
-      const client = mqtt.connect(MQTT_BROKER_URL);
+      const client = mqtt.connect(MQTT_BROKER_URL, {
+        reconnectPeriod: 1000, // ms
+        connectTimeout: 30 * 1000, // ms
+      });
+
       clientRef.current = client;
 
       client.on('connect', () => {
         setMqttStatus('connected');
-        toast({ title: "Hardware Control", description: "Connected to Pi controller." });
+        toast({ title: "Hardware Control", description: "Successfully connected to Pi controller." });
       });
 
       client.on('error', (err) => {
         console.error('MQTT connection error:', err);
         setMqttStatus('error');
-        client.end();
+        // The client will automatically try to reconnect. We don't need to end it.
       });
 
       client.on('offline', () => {
@@ -83,15 +90,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       client.on('reconnect', () => {
         setMqttStatus('connecting');
       });
-
     } catch (error) {
       console.error("Failed to initialize MQTT client:", error);
       setMqttStatus('error');
     }
 
+    // Cleanup function to run when the component unmounts
     return () => {
       if (clientRef.current) {
-        clientRef.current.end();
+        clientRef.current.end(true); // Force close the connection
         clientRef.current = null;
       }
     };
@@ -99,7 +106,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   const publish = (topic: string, message: string) => {
     if (clientRef.current && clientRef.current.connected) {
-      clientRef.current.publish(topic, message, (err) => {
+      clientRef.current.publish(topic, message, { qos: 1 }, (err) => {
         if (err) {
           console.error('MQTT publish error:', err);
           toast({ variant: 'destructive', title: 'Publish Error', description: 'Failed to send command to hardware.'});
@@ -260,20 +267,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const randomEvent = Math.random();
       
-      if (randomEvent < 0.1) {
+      // Reduce frequency of automatic events to avoid being too noisy
+      if (randomEvent < 0.05) { 
         const enteringVehicle = vehicles.find(v => v.status === "registered");
         if(enteringVehicle) handleEnterGate(enteringVehicle.id);
-      } else if (randomEvent > 0.9) {
+      } else if (randomEvent > 0.95) {
         const insideVehicles = vehicles.filter(v => v.status === "inside");
         if (insideVehicles.length > 0) {
           const randomVehicle = insideVehicles[Math.floor(Math.random() * insideVehicles.length)];
           handleExitGate(randomVehicle.id);
         }
       }
-    }, 15000);
+    }, 20000); // Increased interval to 20 seconds
 
     return () => clearInterval(interval);
-  }, [currentCapacity, maxCapacity, vehicles, currentUser.type, handleEnterGate, handleExitGate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentCapacity, maxCapacity, vehicles, currentUser.type]);
 
 
   const value = {
@@ -315,5 +324,3 @@ export function useAppStore() {
   }
   return context;
 }
-
-    
