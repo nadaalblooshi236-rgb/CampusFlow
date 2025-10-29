@@ -270,7 +270,7 @@ export default function LiveFeedView() {
       </CardHeader>
       <CardContent className="space-y-4">
 
-        <RadioGroup value={cameraSource} onValueChange={(value: CameraSource) => setCameraSource(value)} className="flex gap-4">
+        <RadioGroup value={cameraSource} onValueChange={(value: any) => setCameraSource(value)} className="flex gap-4">
             <div className="flex items-center space-x-2">
                 <RadioGroupItem value="pi" id="pi-cam" />
                 <Label htmlFor="pi-cam">Raspberry Pi Camera</Label>

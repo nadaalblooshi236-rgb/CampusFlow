@@ -39,7 +39,7 @@ export default function VehicleRegistrationView() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="plate">License Plate</Label>
-              <Input id="plate" placeholder="ABC123" className="focus:ring-2 focus:ring-ats-green" />
+              <Input id="plate" placeholder="ABC 12345" className="focus:ring-2 focus:ring-ats-green" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="driver">Driver Name</Label>
