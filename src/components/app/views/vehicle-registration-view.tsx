@@ -47,7 +47,7 @@ export default function VehicleRegistrationView() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="student">Student Name</Label>
-              <Input id="student" value={currentUser.studentName || ''} readOnly className="bg-secondary" />
+              <Input id="student" placeholder="Enter student's full name" className="focus:ring-2 focus:ring-ats-green" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="studentClass">Class of Student</Label>
