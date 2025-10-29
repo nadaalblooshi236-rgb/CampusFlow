@@ -2,10 +2,11 @@
 
 import { useAppStore } from "@/hooks/use-app-store";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Wifi, WifiOff, Loader } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Wifi, WifiOff, Loader, Zap } from "lucide-react";
 
 export default function HardwareStatus() {
-  const { mqttStatus } = useAppStore();
+  const { mqttStatus, testGate, mqttBrokerUrl } = useAppStore();
 
   const getStatusInfo = () => {
     switch (mqttStatus) {
@@ -55,13 +56,42 @@ export default function HardwareStatus() {
         <CardTitle>Hardware Control Status</CardTitle>
         <CardDescription>Real-time status of the connection to the gate controller.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-6">
         <div className="flex items-center space-x-6">
           {icon}
           <div>
             <p className={`text-xl font-bold ${textColor}`}>{text}</p>
             <p className="text-sm text-muted-foreground">{description}</p>
+            <p className="text-xs text-muted-foreground mt-1">Broker: {mqttBrokerUrl}</p>
           </div>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+            <Card className="flex-1 bg-secondary/50">
+                <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                        <Zap className="text-primary"/> Manual Gate Test
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                        Use these buttons to test the servo connection directly.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="flex gap-2">
+                     <Button 
+                        onClick={() => testGate('open')} 
+                        disabled={mqttStatus !== 'connected'}
+                        className="bg-green-500 hover:bg-green-600 text-white"
+                     >
+                        Test Open (90°)
+                    </Button>
+                    <Button 
+                        onClick={() => testGate('close')} 
+                        disabled={mqttStatus !== 'connected'}
+                        variant="destructive"
+                    >
+                        Test Close (0°)
+                    </Button>
+                </CardContent>
+            </Card>
         </div>
       </CardContent>
     </Card>

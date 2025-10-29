@@ -5,6 +5,10 @@ import { initialVehicles, initialRequests, initialNotifications, initialAttendan
 import { useToast } from "@/hooks/use-toast";
 import mqtt, { MqttClient } from 'mqtt';
 
+const MQTT_BROKER_URL = 'wss://broker.emqx.io:8084/mqtt';
+const GATE_TOPIC = 'ats/smartgate/gate';
+const LED_TOPIC = 'ats/smartgate/led';
+
 interface AppState {
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -30,13 +34,11 @@ interface AppState {
   denyRequest: (requestId: number) => void;
   submitRequest: (newRequest: Omit<PickupRequest, 'id' | 'lastUpdated'>) => void;
   mqttStatus: 'connected' | 'disconnected' | 'connecting' | 'error';
+  testGate: (action: 'open' | 'close') => void;
+  mqttBrokerUrl: string;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
-
-const MQTT_BROKER_URL = 'wss://broker.emqx.io:8084/mqtt';
-const GATE_TOPIC = 'ats/smartgate/gate';
-const LED_TOPIC = 'ats/smartgate/led';
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
@@ -84,7 +86,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   const publish = (topic: string, message: string) => {
     if (clientRef.current && clientRef.current.connected) {
-      clientRef.current.publish(topic, message);
+      clientRef.current.publish(topic, message, (err) => {
+        if (err) {
+          console.error('MQTT publish error:', err);
+          toast({ variant: 'destructive', title: 'Publish Error', description: 'Failed to send command to hardware.'});
+        }
+      });
+    } else {
+        toast({ variant: 'destructive', title: 'Hardware Disconnected', description: 'Cannot send command. Check connection.'});
     }
   }
   
@@ -108,9 +117,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const operateGate = () => {
     publish(GATE_TOPIC, '90'); // 90 degrees to open
     setGateStatus("open");
+    addNotification({ message: 'Gate opening command sent.', time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), type: 'entry' });
     setTimeout(() => {
       publish(GATE_TOPIC, '0'); // 0 degrees to close
       setGateStatus("closed");
+      addNotification({ message: 'Gate closing command sent.', time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), type: 'exit' });
     }, 4000); // Gate stays open for 4 seconds
   }
 
@@ -137,6 +148,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setAttendance(prev => prev.map(record => 
       record.vehicleId === vehicleId ? { ...record, entry: now, status: "present" } : record
     ));
+  };
+  
+  const testGate = (action: 'open' | 'close') => {
+    const command = action === 'open' ? '90' : '0';
+    publish(GATE_TOPIC, command);
+    toast({ title: 'Test Command Sent', description: `Sent '${command}°' command to gate.`});
   };
 
   const handleExitGate = (vehicleId: number) => {
@@ -271,6 +288,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     denyRequest,
     submitRequest,
     mqttStatus,
+    testGate,
+    mqttBrokerUrl: MQTT_BROKER_URL,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
