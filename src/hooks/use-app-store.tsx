@@ -106,10 +106,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
   
   const operateGate = () => {
-    publish(GATE_TOPIC, 'open');
+    publish(GATE_TOPIC, '90'); // 90 degrees to open
     setGateStatus("open");
     setTimeout(() => {
-      publish(GATE_TOPIC, 'close');
+      publish(GATE_TOPIC, '0'); // 0 degrees to close
       setGateStatus("closed");
     }, 4000); // Gate stays open for 4 seconds
   }
