@@ -58,47 +58,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const clientRef = useRef<MqttClient | null>(null);
 
   useEffect(() => {
-    // Only run this on the client
-    if (typeof window === 'undefined') return;
-
-    if (clientRef.current) return;
+    // This effect should only run once on mount to initialize and clean up the MQTT client.
+    if (clientRef.current) {
+      return; // Already initialized
+    }
     
     setMqttStatus('connecting');
-    try {
-      const client = mqtt.connect(MQTT_BROKER_URL, {
-        reconnectPeriod: 1000, // ms
-        connectTimeout: 30 * 1000, // ms
-      });
+    const client = mqtt.connect(MQTT_BROKER_URL, {
+      reconnectPeriod: 1000,
+      connectTimeout: 10 * 1000, // 10 seconds
+    });
+    
+    clientRef.current = client;
 
-      clientRef.current = client;
+    const onConnect = () => {
+      setMqttStatus('connected');
+      toast({ title: "Hardware Control", description: "Successfully connected to Pi controller." });
+    };
 
-      client.on('connect', () => {
-        setMqttStatus('connected');
-        toast({ title: "Hardware Control", description: "Successfully connected to Pi controller." });
-      });
-
-      client.on('error', (err) => {
-        console.error('MQTT connection error:', err);
-        setMqttStatus('error');
-        // The client will automatically try to reconnect. We don't need to end it here.
-      });
-
-      client.on('offline', () => {
-        setMqttStatus('disconnected');
-      });
-      
-      client.on('reconnect', () => {
-        setMqttStatus('connecting');
-      });
-    } catch (error) {
-      console.error("Failed to initialize MQTT client:", error);
+    const onError = (err: Error) => {
+      console.error('MQTT connection error:', err);
       setMqttStatus('error');
-    }
+      // The client will attempt to reconnect automatically.
+      // We don't need to end the client here.
+    };
 
-    // Cleanup function to run when the component unmounts
+    const onOffline = () => {
+      setMqttStatus('disconnected');
+    };
+
+    const onReconnect = () => {
+      setMqttStatus('connecting');
+    };
+
+    client.on('connect', onConnect);
+    client.on('error', onError);
+    client.on('offline', onOffline);
+    client.on('reconnect', onReconnect);
+
+    // Cleanup function: this will be called when the component unmounts.
     return () => {
       if (clientRef.current) {
-        clientRef.current.end(true); // Force close the connection
+        // Remove all listeners to prevent memory leaks
+        clientRef.current.removeListener('connect', onConnect);
+        clientRef.current.removeListener('error', onError);
+        clientRef.current.removeListener('offline', onOffline);
+        clientRef.current.removeListener('reconnect', onReconnect);
+        // End the connection
+        clientRef.current.end(true);
         clientRef.current = null;
       }
     };
@@ -324,5 +331,3 @@ export function useAppStore() {
   }
   return context;
 }
-
-    
