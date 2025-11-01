@@ -59,6 +59,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const clientRef = useRef<MqttClient | null>(null);
 
   useEffect(() => {
+    // Ensure this code only runs on the client
+    if (typeof window === 'undefined') {
+      return;
+    }
+      
     if (clientRef.current) return;
 
     setMqttStatus('connecting');
@@ -79,7 +84,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.error('MQTT connection error:', err);
         setMqttStatus('error');
         // The client will attempt to reconnect automatically if not explicitly ended.
-        // We don't end the client here to allow for retries.
       };
 
       const handleOffline = () => {
