@@ -59,56 +59,59 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const clientRef = useRef<MqttClient | null>(null);
 
   useEffect(() => {
-    // Ensure this code only runs on the client
-    if (typeof window === 'undefined' || clientRef.current) {
+    // This hook now only runs once on component mount on the client-side.
+    if (typeof window === 'undefined') {
       return;
     }
-      
+    
+    if (clientRef.current) {
+      return; // Client is already initialized or trying to connect.
+    }
+
     setMqttStatus('connecting');
     try {
       const client = mqtt.connect(MQTT_BROKER_URL, {
-        reconnectPeriod: 1000, // ms
-        connectTimeout: 30 * 1000, // ms
+        reconnectPeriod: 2000,
+        connectTimeout: 20 * 1000,
       });
 
       clientRef.current = client;
 
-      const handleConnect = () => {
+      client.on('connect', () => {
         setMqttStatus('connected');
         toast({ title: "Hardware Control", description: "Successfully connected to Pi controller." });
-      };
+      });
 
-      const handleError = (err: Error) => {
-        console.error('MQTT connection error:', err);
+      client.on('error', (err) => {
+        console.error('MQTT Connection Error:', err);
         setMqttStatus('error');
-        // The client will attempt to reconnect automatically if not explicitly ended.
-      };
+        // Don't toast here as it can be noisy during reconnect attempts.
+        // The UI will show the error state.
+      });
 
-      const handleOffline = () => {
-        setMqttStatus('disconnected');
-      };
-      
-      const handleReconnect = () => {
+      client.on('reconnect', () => {
         setMqttStatus('connecting');
-      };
+      });
 
-      client.on('connect', handleConnect);
-      client.on('error', handleError);
-      client.on('offline', handleOffline);
-      client.on('reconnect', handleReconnect);
+      client.on('offline', () => {
+        setMqttStatus('disconnected');
+        toast({ variant: 'destructive', title: 'Hardware Disconnected', description: 'Connection to controller lost.' });
+      });
 
-      // Cleanup function to run on component unmount
-      return () => {
-        if (clientRef.current) {
-          clientRef.current.end(true);
-          clientRef.current = null;
-        }
-      };
     } catch (error) {
-       console.error('MQTT failed to connect on initial setup', error);
+       console.error('MQTT failed to initialize:', error);
        setMqttStatus('error');
     }
-  }, [toast]);
+
+    // Cleanup on component unmount
+    return () => {
+      if (clientRef.current) {
+        clientRef.current.end(true); // Force close the connection
+        clientRef.current = null;
+        setMqttStatus('disconnected');
+      }
+    };
+  }, [toast]); // Dependency array includes toast
   
   const publish = (topic: string, message: string) => {
     if (clientRef.current && clientRef.current.connected) {
@@ -300,3 +303,5 @@ export function useAppStore() {
   }
   return context;
 }
+
+    
