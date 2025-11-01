@@ -59,7 +59,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const clientRef = useRef<MqttClient | null>(null);
 
   useEffect(() => {
-    if (clientRef.current || typeof window === 'undefined') {
+    // This effect should only run once on the client side.
+    if (typeof window === 'undefined' || clientRef.current) {
       return;
     }
 
@@ -68,6 +69,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const client = mqtt.connect(MQTT_BROKER_URL, {
         reconnectPeriod: 2000,
         connectTimeout: 20 * 1000,
+        clientId: `campusflow_web_${Math.random().toString(16).substr(2, 8)}`
       });
 
       clientRef.current = client;
@@ -80,7 +82,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       client.on('error', (err) => {
         console.error('MQTT Connection Error:', err);
         setMqttStatus('error');
-        // Do not toast here to avoid noise during reconnections. UI indicates the error state.
+        toast({ variant: 'destructive', title: 'MQTT Error', description: `Could not connect: ${err.message}` });
       });
 
       client.on('reconnect', () => {
@@ -93,7 +95,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
       
       client.on('close', () => {
-        setMqttStatus('disconnected');
+        if (clientRef.current) { // Prevents setting state on unmount
+            setMqttStatus('disconnected');
+        }
       });
 
     } catch (error) {
@@ -105,7 +109,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (clientRef.current) {
         clientRef.current.end(true); // Force close the connection
         clientRef.current = null;
-        setMqttStatus('disconnected');
       }
     };
   }, [toast]);
