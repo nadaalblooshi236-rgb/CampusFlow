@@ -60,17 +60,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Ensure this code only runs on the client
-    if (typeof window === 'undefined') {
+    if (typeof window === 'undefined' || clientRef.current) {
       return;
     }
       
-    if (clientRef.current) return;
-
     setMqttStatus('connecting');
     try {
       const client = mqtt.connect(MQTT_BROKER_URL, {
-        reconnectPeriod: 1000,
-        connectTimeout: 10 * 1000,
+        reconnectPeriod: 1000, // ms
+        connectTimeout: 30 * 1000, // ms
       });
 
       clientRef.current = client;
@@ -102,16 +100,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Cleanup function to run on component unmount
       return () => {
         if (clientRef.current) {
-          // Remove listeners to prevent memory leaks
-          clientRef.current.removeListener('connect', handleConnect);
-          clientRef.current.removeListener('error', handleError);
-          clientRef.current.removeListener('offline', handleOffline);
-          clientRef.current.removeListener('reconnect', handleReconnect);
-          
-          // End the connection gracefully
-          clientRef.current.end(true, () => {
-             clientRef.current = null;
-          });
+          clientRef.current.end(true);
+          clientRef.current = null;
         }
       };
     } catch (error) {
@@ -140,11 +130,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   const operateGate = () => {
     publish(GATE_TOPIC, '90'); // 90 degrees to open
+    publish(LED_TOPIC, 'on');
     setGateStatus("open");
     addNotification({ message: 'Gate opening command sent.', type: 'entry' });
     
     setTimeout(() => {
       publish(GATE_TOPIC, '0'); // 0 degrees to close
+      publish(LED_TOPIC, 'off');
       setGateStatus("closed");
       addNotification({ message: 'Gate closing command sent.', type: 'exit' });
     }, 4000); // Gate stays open for 4 seconds
@@ -308,5 +300,3 @@ export function useAppStore() {
   }
   return context;
 }
-
-    
