@@ -59,13 +59,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const clientRef = useRef<MqttClient | null>(null);
 
   useEffect(() => {
-    // This hook now only runs once on component mount on the client-side.
-    if (typeof window === 'undefined') {
+    if (clientRef.current || typeof window === 'undefined') {
       return;
-    }
-    
-    if (clientRef.current) {
-      return; // Client is already initialized or trying to connect.
     }
 
     setMqttStatus('connecting');
@@ -85,17 +80,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       client.on('error', (err) => {
         console.error('MQTT Connection Error:', err);
         setMqttStatus('error');
-        // Don't toast here as it can be noisy during reconnect attempts.
-        // The UI will show the error state.
+        // Do not toast here to avoid noise during reconnections. UI indicates the error state.
       });
 
       client.on('reconnect', () => {
         setMqttStatus('connecting');
       });
-
+      
       client.on('offline', () => {
         setMqttStatus('disconnected');
         toast({ variant: 'destructive', title: 'Hardware Disconnected', description: 'Connection to controller lost.' });
+      });
+      
+      client.on('close', () => {
+        setMqttStatus('disconnected');
       });
 
     } catch (error) {
@@ -103,7 +101,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
        setMqttStatus('error');
     }
 
-    // Cleanup on component unmount
     return () => {
       if (clientRef.current) {
         clientRef.current.end(true); // Force close the connection
@@ -111,7 +108,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setMqttStatus('disconnected');
       }
     };
-  }, [toast]); // Dependency array includes toast
+  }, [toast]);
   
   const publish = (topic: string, message: string) => {
     if (clientRef.current && clientRef.current.connected) {
@@ -303,5 +300,3 @@ export function useAppStore() {
   }
   return context;
 }
-
-    
