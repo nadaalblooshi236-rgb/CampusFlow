@@ -9,6 +9,9 @@ import mqtt, { MqttClient } from 'mqtt';
 const MQTT_BROKER_URL = 'wss://broker.emqx.io:8084/mqtt';
 const GATE_TOPIC = 'ats/smartgate/gate';
 const LED_TOPIC = 'ats/smartgate/led';
+const PI_STATUS_TOPIC = 'ats/smartgate/status';
+
+type MqttStatus = 'connected' | 'disconnected' | 'connecting' | 'error' | 'reconnecting' | 'pi_offline';
 
 interface AppState {
   activeTab: string;
@@ -34,7 +37,7 @@ interface AppState {
   approveRequest: (requestId: number) => void;
   denyRequest: (requestId: number) => void;
   submitRequest: (newRequest: Omit<PickupRequest, 'id' | 'lastUpdated'>) => void;
-  mqttStatus: 'connected' | 'disconnected' | 'connecting' | 'error';
+  mqttStatus: MqttStatus;
   testGate: (action: 'open' | 'close') => void;
   mqttBrokerUrl: string;
 }
@@ -55,8 +58,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [currentCapacity, setCurrentCapacity] = useState(vehicles.filter(v => v.status === 'inside').length);
   const [maxCapacity] = useState(50);
   
-  const [mqttStatus, setMqttStatus] = useState<'connected' | 'disconnected' | 'connecting' | 'error'>('connecting');
+  const [mqttStatus, setMqttStatus] = useState<MqttStatus>('connecting');
   const clientRef = useRef<MqttClient | null>(null);
+  const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // This effect should only run once on the client side.
@@ -68,34 +72,74 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setMqttStatus('connecting');
       const client = mqtt.connect(MQTT_BROKER_URL, {
         reconnectPeriod: 5000,
-        connectTimeout: 20 * 1000,
+        connectTimeout: 10 * 1000, // 10 seconds
         clientId: `campusflow_web_${Math.random().toString(16).substr(2, 8)}`
       });
       clientRef.current = client;
 
+      const clearStatusTimeout = () => {
+        if (statusTimeoutRef.current) {
+            clearTimeout(statusTimeoutRef.current);
+            statusTimeoutRef.current = null;
+        }
+      }
+
       const handleConnect = () => {
-        setMqttStatus('connected');
-        toast({ title: "Hardware Connected", description: "Successfully connected to the gate controller." });
+        toast({ title: "Broker Connected", description: "Waiting for status from hardware..." });
+        client.subscribe(PI_STATUS_TOPIC, { qos: 1 }, (err) => {
+          if (err) {
+            console.error("Failed to subscribe to Pi status topic", err);
+            setMqttStatus('error');
+          } else {
+            // Start a timeout. If we don't hear from the Pi, assume it's offline.
+            statusTimeoutRef.current = setTimeout(() => {
+                toast({ variant: 'destructive', title: 'Hardware Not Found', description: 'No status signal received from the Raspberry Pi.' });
+                setMqttStatus('pi_offline');
+            }, 5000); // 5-second timeout
+          }
+        });
       };
 
       const handleError = (err: Error) => {
         console.error('MQTT Connection Error:', err);
         setMqttStatus('error');
-        toast({ variant: 'destructive', title: 'Hardware Error', description: `Could not connect: ${err.message}` });
+        toast({ variant: 'destructive', title: 'Connection Error', description: `Could not connect to broker: ${err.message}` });
+        clearStatusTimeout();
       };
       
       const handleReconnect = () => {
-        setMqttStatus('connecting');
-        toast({ title: 'Reconnecting...', description: 'Attempting to reconnect to the hardware.' });
+        setMqttStatus('reconnecting');
+        toast({ title: 'Reconnecting...', description: 'Attempting to reconnect to the broker.' });
+        clearStatusTimeout();
       };
 
       const handleOffline = () => {
         setMqttStatus('disconnected');
-        toast({ variant: 'destructive', title: 'Hardware Disconnected', description: 'Connection lost. Please check network.' });
+        toast({ variant: 'destructive', title: 'Broker Disconnected', description: 'Connection lost. Please check network.' });
+        clearStatusTimeout();
       };
       
       const handleClose = () => {
-          setMqttStatus('disconnected');
+        if (mqttStatus !== 'error') {
+            setMqttStatus('disconnected');
+        }
+        clearStatusTimeout();
+      };
+
+      const handleMessage = (topic: string, payload: Buffer) => {
+          if (topic === PI_STATUS_TOPIC) {
+              const message = payload.toString();
+              if (message === 'online') {
+                  clearStatusTimeout();
+                  if (mqttStatus !== 'connected') {
+                    setMqttStatus('connected');
+                    toast({ title: "Hardware Connected", description: "Successfully receiving signals from Raspberry Pi.", className: "bg-green-100 text-green-800" });
+                  }
+              } else if (message === 'offline') {
+                  setMqttStatus('pi_offline');
+                  toast({ variant: 'destructive', title: "Hardware Offline", description: "Raspberry Pi has disconnected." });
+              }
+          }
       };
 
       client.on('connect', handleConnect);
@@ -103,16 +147,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       client.on('reconnect', handleReconnect);
       client.on('offline', handleOffline);
       client.on('close', handleClose);
+      client.on('message', handleMessage);
 
       // Cleanup function to run when the component unmounts
       return () => {
         if (clientRef.current) {
-          client.removeListener('connect', handleConnect);
-          client.removeListener('error', handleError);
-          client.removeListener('reconnect', handleReconnect);
-          client.removeListener('offline', handleOffline);
-          client.removeListener('close', handleClose);
-          client.end(true); // Force close the connection
+          clearStatusTimeout();
+          client.end(true);
           clientRef.current = null;
         }
       };
@@ -120,10 +161,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
        console.error('MQTT initialization failed:', error);
        setMqttStatus('error');
     }
-  }, [toast]); // Dependency array ensures this runs only when toast context is available
+  }, [toast]); // Dependency array ensures this runs only once.
   
   const publish = (topic: string, message: string) => {
-    if (clientRef.current && clientRef.current.connected) {
+    if (clientRef.current && mqttStatus === 'connected') {
       clientRef.current.publish(topic, message, { qos: 1 }, (err) => {
         if (err) {
           console.error('MQTT publish error:', err);
@@ -131,7 +172,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       });
     } else {
-        toast({ variant: 'destructive', title: 'Hardware Disconnected', description: 'Cannot send command. Check connection status.'});
+        toast({ variant: 'destructive', title: 'Hardware Not Connected', description: 'Cannot send command. Pi is offline or not responding.'});
     }
   }
   
@@ -312,3 +353,5 @@ export function useAppStore() {
   }
   return context;
 }
+
+    

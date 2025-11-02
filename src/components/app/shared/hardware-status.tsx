@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useAppStore } from "@/hooks/use-app-store";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Wifi, WifiOff, Loader, Zap } from "lucide-react";
+import { Wifi, WifiOff, Loader, Zap, PowerOff } from "lucide-react";
 
 export default function HardwareStatus() {
   const { mqttStatus, testGate, mqttBrokerUrl } = useAppStore();
@@ -20,16 +21,30 @@ export default function HardwareStatus() {
       case "disconnected":
         return {
           icon: <WifiOff className="w-8 h-8 text-red-500" />,
-          text: "Hardware Disconnected",
+          text: "Broker Disconnected",
           textColor: "text-red-600",
-          description: "Not connected. Check Pi script, network, and MQTT broker status.",
+          description: "Connection to the message broker was lost. Check your internet.",
         };
       case "connecting":
         return {
           icon: <Loader className="w-8 h-8 text-yellow-500 animate-spin" />,
-          text: "Connecting to Hardware...",
+          text: "Connecting to Broker...",
           textColor: "text-yellow-600",
-          description: "Attempting to establish a connection with the controller.",
+          description: "Attempting to establish a connection with the broker.",
+        };
+       case "reconnecting":
+        return {
+          icon: <Loader className="w-8 h-8 text-yellow-500 animate-spin" />,
+          text: "Reconnecting...",
+          textColor: "text-yellow-600",
+          description: "Connection was lost. Trying to reconnect to the broker.",
+        };
+      case "pi_offline":
+         return {
+          icon: <PowerOff className="w-8 h-8 text-destructive" />,
+          text: "Hardware Offline",
+          textColor: "text-destructive",
+          description: "Connected to broker, but the Raspberry Pi is not responding.",
         };
       case "error":
         return {
@@ -97,3 +112,5 @@ export default function HardwareStatus() {
     </Card>
   );
 }
+
+    
