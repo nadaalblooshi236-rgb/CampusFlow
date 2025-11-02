@@ -1,120 +1,133 @@
 import paho.mqtt.client as mqtt
 import time
+import RPi.GPIO as GPIO
 
-# MQTT Configuration
+# --- Hardware Configuration ---
+# WARNING: Please ensure these are the correct GPIO pin numbers you are using.
+SERVO_PIN = 18  # GPIO pin for the servo motor
+LED_PIN = 17    # GPIO pin for the LED
+
+# --- MQTT Configuration ---
 MQTT_BROKER_URL = "broker.emqx.io"
-MQTT_PORT = 1883
+MQTT_BROKER_PORT = 1883
+CLIENT_ID = f"pi_controller_{int(time.time())}"
+
+# --- Topics ---
 GATE_TOPIC = "ats/smartgate/gate"
 LED_TOPIC = "ats/smartgate/led"
-PI_STATUS_TOPIC = "ats/smartgate/status"
+STATUS_TOPIC = "ats/smartgate/status"
 
-# --- MOCK HARDWARE FUNCTIONS (for testing without real hardware) ---
-# Replace these with your actual servo and LED control functions
-def control_servo(position):
-    """
-    Controls the servo motor.
-    - position (int): The desired position of the servo (0 for closed, 90 for open).
-    """
-    print(f"--- MOCK SERVO: Moving to {position} degrees ---")
+# --- Last Will and Testament (LWT) ---
+LWT_MESSAGE = "offline"
+LWT_TOPIC = STATUS_TOPIC
+
+def setup_hardware():
+    """Initializes GPIO pins for the servo and LED."""
+    GPIO.setmode(GPIO.BCM)  # Use Broadcom pin-numbering scheme
+    GPIO.setwarnings(False) # Disable warnings
+
+    # Setup LED pin
+    GPIO.setup(LED_PIN, GPIO.OUT)
+    GPIO.output(LED_PIN, GPIO.LOW) # Turn LED off initially
+
+    # Setup Servo pin
+    GPIO.setup(SERVO_PIN, GPIO.OUT)
+    p = GPIO.PWM(SERVO_PIN, 50)  # GPIO 18 for PWM with 50Hz
+    p.start(2.5) # Initialization
+    time.sleep(0.5)
+    p.ChangeDutyCycle(0) # Stop sending signal to servo
+    return p
+
+def control_servo(pwm, angle):
+    """Controls the servo motor to move to a specific angle."""
+    duty_cycle = 2.5 + (angle / 18.0)
+    print(f"Moving servo to {angle} degrees (Duty Cycle: {duty_cycle:.2f})")
+    pwm.ChangeDutyCycle(duty_cycle)
+    time.sleep(1) # Allow time for servo to move
+    pwm.ChangeDutyCycle(0) # Stop sending signal to reduce jitter
 
 def control_led(state):
-    """
-    Controls an LED.
-    - state (str): "on", "off", or "flash".
-    """
-    if state == "on":
-        print("--- MOCK LED: Turning ON ---")
-    elif state == "off":
-        print("--- MOCK LED: Turning OFF ---")
-    elif state == "flash":
-        print("--- MOCK LED: Flashing ---")
-# --------------------------------------------------------------------
+    """Controls the LED."""
+    if state == 'on':
+        print("Turning LED ON")
+        GPIO.output(LED_PIN, GPIO.HIGH)
+    elif state == 'off':
+        print("Turning LED OFF")
+        GPIO.output(LED_PIN, GPIO.LOW)
+    elif state == 'flash':
+        print("Flashing LED")
+        for _ in range(5):
+            GPIO.output(LED_PIN, GPIO.HIGH)
+            time.sleep(0.2)
+            GPIO.output(LED_PIN, GPIO.LOW)
+            time.sleep(0.2)
 
-
-# --- MQTT CALLBACKS ---
-
-def on_connect(client, userdata, flags, rc):
-    """Callback function for when the client connects to the broker."""
+def on_connect(client, userdata, flags, rc, properties=None):
+    """Callback for when the client connects to the broker."""
     if rc == 0:
         print(f"Connected successfully to MQTT Broker at {MQTT_BROKER_URL}")
-        # Subscribe to topics
         client.subscribe(GATE_TOPIC)
         print(f"Subscribed to topic: {GATE_TOPIC}")
         client.subscribe(LED_TOPIC)
         print(f"Subscribed to topic: {LED_TOPIC}")
         
-        # Announce that the Pi is online
-        print("Sending 'online' status to topic...")
-        client.publish(PI_STATUS_TOPIC, "online", qos=1, retain=True)
+        # Send the "online" status message
+        print(f"Sending 'online' status to topic: {STATUS_TOPIC}")
+        client.publish(STATUS_TOPIC, "online", qos=1, retain=True)
     else:
         print(f"Failed to connect, return code {rc}\n")
 
 def on_message(client, userdata, msg):
-    """Callback function for when a message is received."""
+    """Callback for when a message is received."""
+    pwm = userdata['pwm']
     payload = msg.payload.decode()
     print(f"Received message on topic {msg.topic}: {payload}")
     
     if msg.topic == GATE_TOPIC:
         try:
-            position = int(payload)
-            if position == 0:
-                print("Received: CLOSE GATE")
-                control_servo(0)
-            elif position == 90:
-                print("Received: OPEN GATE")
-                control_servo(90)
+            angle = int(payload)
+            if 0 <= angle <= 180:
+                control_servo(pwm, angle)
             else:
-                print(f"Warning: Received invalid position '{position}'")
+                print("Invalid angle. Must be between 0 and 180.")
         except ValueError:
-            print(f"Error: Could not convert payload '{payload}' to an integer.")
-
+            print("Invalid payload for gate topic. Expected an integer angle.")
+            
     elif msg.topic == LED_TOPIC:
-        if payload == "on":
-            print("Received: LED ON")
-            control_led("on")
-        elif payload == "off":
-            print("Received: LED OFF")
-            control_led("off")
-        elif payload == "flash":
-            print("Received: LED FLASH")
-            control_led("flash")
-        else:
-            print(f"Warning: Received invalid LED command '{payload}'")
+        control_led(payload)
 
-# --- MAIN SCRIPT ---
 
-def setup_client():
-    """Sets up and configures the MQTT client."""
-    # Set the "Last Will and Testament" (LWT)
-    # If the Pi disconnects ungracefully, the broker will publish "offline" for us.
-    client = mqtt.Client(client_id=f"pi-controller-{int(time.time())}", protocol=mqtt.MQTTv311, transport="tcp")
-    client.will_set(PI_STATUS_TOPIC, payload="offline", qos=1, retain=True)
+def setup_client(userdata):
+    """Sets up and returns an MQTT client instance."""
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=CLIENT_ID, clean_session=True)
+    client.user_data_set(userdata)
+    
+    client.will_set(LWT_TOPIC, payload=LWT_MESSAGE, qos=1, retain=True)
     
     client.on_connect = on_connect
     client.on_message = on_message
     
+    print("Connecting to MQTT broker...")
+    try:
+        client.connect(MQTT_BROKER_URL, MQTT_BROKER_PORT, 60)
+    except Exception as e:
+        print(f"Error connecting to broker: {e}")
+        return None
+        
     return client
 
-if __name__ == "__main__":
-    print("Starting hardware controller...")
-    client = setup_client()
-    
+if __name__ == '__main__':
+    pwm_controller = None
     try:
-        print(f"Connecting to MQTT broker at {MQTT_BROKER_URL}...")
-        client.connect(MQTT_BROKER_URL, MQTT_PORT, 60)
-        
-        # Loop forever to process network traffic and dispatch callbacks.
-        # This is a blocking call.
-        client.loop_forever()
-        
-    except ConnectionRefusedError:
-        print("Connection refused. Check broker address and port.")
-    except OSError as e:
-        print(f"Network error: {e}. Check your internet connection.")
-    except KeyboardInterrupt:
-        print("\nDisconnecting from MQTT broker...")
+        pwm_controller = setup_hardware()
+        client = setup_client({'pwm': pwm_controller})
+        if client:
+            client.loop_forever()
+    except Exception as e:
+        print(f"An error occurred: {e}")
     finally:
-        # Before exiting, explicitly send an "offline" message
-        client.publish(PI_STATUS_TOPIC, "offline", qos=1, retain=True)
-        client.disconnect()
-        print("Hardware controller stopped.")
+        print("Cleaning up GPIO...")
+        if pwm_controller:
+            pwm_controller.stop()
+        GPIO.cleanup()
+        print("GPIO cleanup complete. Exiting.")
