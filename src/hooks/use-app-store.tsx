@@ -134,7 +134,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               if (message === 'online') {
                   clearStatusTimeout();
                   // Only update and toast if the status wasn't already 'connected'
-                  if (clientRef.current?.connected) {
+                  if (clientRef.current?.connected && mqttStatus !== 'connected') {
                     setMqttStatus('connected');
                     toast({ title: "Hardware Connected", description: "Successfully receiving signals from Raspberry Pi.", className: "bg-green-100 text-green-800" });
                   }
@@ -169,7 +169,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
   
   const publish = (topic: string, message: string) => {
-    if (clientRef.current && mqttStatus === 'connected') {
+    if (clientRef.current && (clientRef.current.connected || clientRef.current.reconnecting)) {
       clientRef.current.publish(topic, message, { qos: 1 }, (err) => {
         if (err) {
           console.error('MQTT publish error:', err);
