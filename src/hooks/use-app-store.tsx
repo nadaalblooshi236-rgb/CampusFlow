@@ -73,7 +73,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const client = mqtt.connect(MQTT_BROKER_URL, {
         reconnectPeriod: 5000,
         connectTimeout: 10 * 1000, // 10 seconds
-        keepalive: 120, // 120 seconds
+        keepalive: 120, 
         clientId: `campusflow_web_${Math.random().toString(16).substr(2, 8)}`
       });
       clientRef.current = client;
@@ -92,11 +92,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
             console.error("Failed to subscribe to Pi status topic", err);
             setMqttStatus('error');
           } else {
-            // Start a timeout. If we don't hear from the Pi, assume it's offline.
             statusTimeoutRef.current = setTimeout(() => {
                 toast({ variant: 'destructive', title: 'Hardware Not Found', description: 'No status signal received from the Raspberry Pi.' });
                 setMqttStatus('pi_offline');
-            }, 5000); // 5-second timeout
+            }, 10000); // Increased timeout to 10 seconds
           }
         });
       };
