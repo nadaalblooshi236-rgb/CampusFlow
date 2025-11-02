@@ -59,53 +59,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const clientRef = useRef<MqttClient | null>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    // This effect should only run once on the client side.
+    if (typeof window === 'undefined' || clientRef.current) {
       return;
-    }
-    
-    if (clientRef.current) {
-      return; 
     }
 
     try {
       setMqttStatus('connecting');
       const client = mqtt.connect(MQTT_BROKER_URL, {
         reconnectPeriod: 5000,
-        connectTimeout: 30 * 1000,
+        connectTimeout: 20 * 1000,
         clientId: `campusflow_web_${Math.random().toString(16).substr(2, 8)}`
       });
       clientRef.current = client;
 
       const handleConnect = () => {
         setMqttStatus('connected');
-        toast({ title: "Hardware Control", description: "Successfully connected to Pi controller." });
+        toast({ title: "Hardware Connected", description: "Successfully connected to the gate controller." });
       };
 
       const handleError = (err: Error) => {
         console.error('MQTT Connection Error:', err);
-        if (clientRef.current) {
-          setMqttStatus('error');
-          toast({ variant: 'destructive', title: 'MQTT Error', description: `Could not connect: ${err.message}` });
-        }
+        setMqttStatus('error');
+        toast({ variant: 'destructive', title: 'Hardware Error', description: `Could not connect: ${err.message}` });
       };
-
+      
       const handleReconnect = () => {
-        if (clientRef.current) {
-          setMqttStatus('connecting');
-        }
+        setMqttStatus('connecting');
+        toast({ title: 'Reconnecting...', description: 'Attempting to reconnect to the hardware.' });
       };
 
       const handleOffline = () => {
-        if (clientRef.current) {
-          setMqttStatus('disconnected');
-          toast({ variant: 'destructive', title: 'Hardware Disconnected', description: 'Connection to controller lost. Check network.' });
-        }
+        setMqttStatus('disconnected');
+        toast({ variant: 'destructive', title: 'Hardware Disconnected', description: 'Connection lost. Please check network.' });
       };
-
+      
       const handleClose = () => {
-        if (clientRef.current) {
           setMqttStatus('disconnected');
-        }
       };
 
       client.on('connect', handleConnect);
@@ -114,23 +104,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       client.on('offline', handleOffline);
       client.on('close', handleClose);
 
-      // Cleanup function
+      // Cleanup function to run when the component unmounts
       return () => {
-        if (client) {
+        if (clientRef.current) {
           client.removeListener('connect', handleConnect);
           client.removeListener('error', handleError);
           client.removeListener('reconnect', handleReconnect);
           client.removeListener('offline', handleOffline);
           client.removeListener('close', handleClose);
-          client.end(true);
+          client.end(true); // Force close the connection
           clientRef.current = null;
         }
       };
     } catch (error) {
-       console.error('MQTT failed to initialize:', error);
+       console.error('MQTT initialization failed:', error);
        setMqttStatus('error');
     }
-  }, [toast]);
+  }, [toast]); // Dependency array ensures this runs only when toast context is available
   
   const publish = (topic: string, message: string) => {
     if (clientRef.current && clientRef.current.connected) {
