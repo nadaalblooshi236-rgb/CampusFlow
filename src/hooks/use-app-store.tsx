@@ -73,6 +73,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const client = mqtt.connect(MQTT_BROKER_URL, {
         reconnectPeriod: 5000,
         connectTimeout: 10 * 1000, // 10 seconds
+        keepalive: 120, // 120 seconds
         clientId: `campusflow_web_${Math.random().toString(16).substr(2, 8)}`
       });
       clientRef.current = client;
@@ -161,7 +162,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
        console.error('MQTT initialization failed:', error);
        setMqttStatus('error');
     }
-  }, [toast]); // Dependency array ensures this runs only once.
+  }, [toast, mqttStatus]);
   
   const publish = (topic: string, message: string) => {
     if (clientRef.current && mqttStatus === 'connected') {
@@ -353,5 +354,3 @@ export function useAppStore() {
   }
   return context;
 }
-
-    
