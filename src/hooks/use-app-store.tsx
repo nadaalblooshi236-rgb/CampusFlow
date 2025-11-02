@@ -92,10 +92,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
             console.error("Failed to subscribe to Pi status topic", err);
             setMqttStatus('error');
           } else {
+            // Wait for a heartbeat from the Pi
             statusTimeoutRef.current = setTimeout(() => {
                 toast({ variant: 'destructive', title: 'Hardware Not Found', description: 'No status signal received from the Raspberry Pi.' });
                 setMqttStatus('pi_offline');
-            }, 10000); // Increased timeout to 10 seconds
+            }, 10000); 
           }
         });
       };
@@ -120,6 +121,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       };
       
       const handleClose = () => {
+        // 'close' can be triggered by errors, so check current status
         if (mqttStatus !== 'error') {
             setMqttStatus('disconnected');
         }
@@ -131,7 +133,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
               const message = payload.toString();
               if (message === 'online') {
                   clearStatusTimeout();
-                  if (mqttStatus !== 'connected') {
+                  // Only update and toast if the status wasn't already 'connected'
+                  if (clientRef.current?.connected) {
                     setMqttStatus('connected');
                     toast({ title: "Hardware Connected", description: "Successfully receiving signals from Raspberry Pi.", className: "bg-green-100 text-green-800" });
                   }
@@ -161,7 +164,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
        console.error('MQTT initialization failed:', error);
        setMqttStatus('error');
     }
-  }, [toast, mqttStatus]);
+  // The empty dependency array is crucial here to ensure this effect runs only once.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   const publish = (topic: string, message: string) => {
     if (clientRef.current && mqttStatus === 'connected') {
